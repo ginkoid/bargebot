@@ -43,7 +43,7 @@ def server_info_embed(guild, request_guild=None):
             inline=True
         )
 
-    roles = ", ".join(role.name for role in guild.roles)
+    roles = " ".join(role.name if role.is_default() else f"<@&{role.id}>" for role in guild.roles)
     embed.add_field(
         name=Translator.translate('all_roles', request_guild),
         value=roles if len(roles) < 1024 else f"{len(guild.roles)} roles",

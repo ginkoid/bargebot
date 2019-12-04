@@ -286,9 +286,7 @@ class ServerAdmin(BaseCog):
             elif perm_lvl in range(7):
                 min_lvl = cogo.permissions["min"]
                 max_lvl = cogo.permissions["max"]
-                if perm_lvl < min_lvl:
-                    await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('cog_min_perm_violation', ctx, cog=cog, min_lvl=min_lvl, min_lvl_name=Translator.translate(f'perm_lvl_{min_lvl}', ctx))}")
-                elif perm_lvl > max_lvl:
+                if perm_lvl > max_lvl:
                     await ctx.send(
                         f"{Emoji.get_chat_emoji('NO')} {Translator.translate('cog_max_perm_violation', ctx, cog=cog, max_lvl=max_lvl, max_lvl_name=Translator.translate(f'perm_lvl_{max_lvl}', ctx))}")
                 else:
@@ -346,10 +344,7 @@ class ServerAdmin(BaseCog):
                 await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('command_core_cog_no_override', ctx, command=command, cog_name=cog_name)}")
             elif perm_lvl in range(7):
                 perm_dict = Permissioncheckers.get_perm_dict(command_object.qualified_name.split(" "), cog.permissions)
-                if perm_lvl < perm_dict["min"]:
-                    lvl = perm_dict["min"]
-                    await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('command_min_perm_violation', ctx, command=command, min_lvl=lvl, min_lvl_name=Translator.translate(f'perm_lvl_{lvl}', ctx))}")
-                elif perm_lvl > perm_dict["max"]:
+                if perm_lvl > perm_dict["max"]:
                     lvl = cog.permissions['max']
                     await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('command_max_perm_violation', ctx, command=command, max_lvl=lvl, max_lvl_name=Translator.translate(f'perm_lvl_{lvl}', ctx))}")
                 else:

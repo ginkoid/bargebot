@@ -261,8 +261,7 @@ class Moderation(BaseCog):
         """bean_help"""
         if reason == "":
             reason = Translator.translate("no_reason", ctx.guild.id)
-        allowed, message = Actions.can_act("bean", ctx, user)
-        if allowed:
+        if True:
             await MessageUtils.send_to(ctx, "YES", "bean_confirmation", user=Utils.clean_user(user), user_id=user.id, reason=reason)
             try :
                 message = await self.bot.wait_for("message", timeout=60*5, check=lambda m: m.author == user and m.channel.guild == ctx.guild and m.channel.permissions_for(m.guild.me).add_reactions)
@@ -273,8 +272,6 @@ class Moderation(BaseCog):
                     await message.add_reaction(Emoji.get_emoji('BEAN'))
                 except Forbidden:
                     await message.channel.send(Emoji.get_chat_emoji('BEAN'))
-        else:
-            await MessageUtils.send_to(ctx, "NO", message, translate=False)
 
     @commands.command(aliases=["🚪"])
     @commands.guild_only()

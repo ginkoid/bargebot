@@ -6,7 +6,7 @@
 		"PREFIX": "!",
 		"TIMESTAMPS": true,
 		"NEW_USER_THRESHOLD": 86400,
-		"TIMEZONE": "Europe/Brussels"
+		"TIMEZONE": "America/New_York"
 	},
 	"ROLES": {
 		"SELF_ROLES": [],

@@ -132,7 +132,7 @@ class Admin(BaseCog):
         for guild in self.bot.guilds:
             if guild.get_member(user) is not None:
                 mutuals.append(guild)
-        for page in Pages.paginate("\n".join(f"{guild.id} - {guild.name}" for guild in mutuals), prefix="```py\n", suffix="```"):
+        for page in Pages.paginate("\n".join(f"{guild.id} - {Utils.clean_name(guild.name)}" for guild in mutuals), prefix="```py\n", suffix="```"):
             await ctx.send(page)
 
     @commands.command()
