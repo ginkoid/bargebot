@@ -277,13 +277,13 @@ def init_logger():
     LOGGER.addHandler(handler)
     DISCORD_LOGGER.addHandler(handler)
 
-    if not os.path.isdir("logs"):
-        os.mkdir("logs")
-    handler = TimedRotatingFileHandler(filename='logs/gearbot.log', encoding='utf-8', when="midnight", backupCount=30)
-    handler.setFormatter(formatter)
-    handler.setLevel(logging.INFO)
+    # if not os.path.isdir("logs"):
+    #     os.mkdir("logs")
+    # handler = TimedRotatingFileHandler(filename='logs/gearbot.log', encoding='utf-8', when="midnight", backupCount=30)
+    # handler.setFormatter(formatter)
+    # handler.setLevel(logging.INFO)
     DISCORD_LOGGER.addHandler(handler)
-    LOGGER.addHandler(handler)
+    # LOGGER.addHandler(handler)
 
     # handler = TimedRotatingFileHandler(filename='logs/discord.log', encoding='utf-8', when="h", interval=1, backupCount=24)
 
