@@ -30,15 +30,6 @@ class Admin(BaseCog):
         await ctx.send("Restarting...")
         await Utils.cleanExit(self.bot, ctx.author.name)
 
-
-    @commands.command(hidden=True)
-    async def upgrade(self, ctx):
-        await ctx.send(
-            f"{Emoji.get_chat_emoji('WRENCH')} I'll be right back with new gears! {Emoji.get_chat_emoji('WOOD')} {Emoji.get_chat_emoji('STONE')} {Emoji.get_chat_emoji('IRON')} {Emoji.get_chat_emoji('GOLD')} {Emoji.get_chat_emoji('DIAMOND')}")
-        await Update.upgrade(ctx.author.name, self.bot)
-
-
-
     @commands.command()
     async def setstatus(self, ctx, type:int, *, status:str):
         """Sets a playing/streaming/listening/watching status"""
@@ -136,11 +127,6 @@ class Admin(BaseCog):
             await ctx.send(page)
 
     @commands.command()
-    async def update(self, ctx):
-        await ctx.invoke(self.bot.get_command("pull"))
-        await ctx.invoke(self.bot.get_command("hotreload"))
-
-    @commands.command()
     async def blacklist_server(self, ctx, guild: Guild):
         blocked = Configuration.get_persistent_var("server_blacklist", [])
         blocked.append(guild.id)
@@ -164,9 +150,6 @@ class Admin(BaseCog):
     @commands.command()
     async def pendingchanges(self, ctx):
         await ctx.send(f'https://github.com/gearbot/GearBot/compare/{self.bot.version}...master')
-
-
-
 
 def setup(bot):
     bot.add_cog(Admin(bot))
