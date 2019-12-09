@@ -32,13 +32,13 @@ class EmojiHandler:
             async with session.get(self.link.format(eid=eid, extension=self.extension)) as r:
                 if r.status is not 200:
                     return False
-                with open(f"emoji/{eid}.{self.extension}", "wb") as file:
+                with open(f"/tmp/emoji/{eid}.{self.extension}", "wb") as file:
                     file.write(await r.read())
         EMOJI_LOCKS.append(eid)
         return True
 
     def get_image(self, eid, frame=None):
-        image = Image.open(f"emoji/{eid}.{self.extension}")
+        image = Image.open(f"/tmp/emoji/{eid}.{self.extension}")
         scale = JUMBO_TARGET_SIZE / max(image.size[0], image.size[1])
         return image.resize((round(image.size[0] * scale), round(image.size[1] * scale)))
 
@@ -48,7 +48,7 @@ class EmojiHandler:
 
     def cleanup(self, eid):
         EMOJI_LOCKS.remove(eid)
-        file_name = f"emoji/{eid}.{self.extension}"
+        file_name = f"/tmp/emoji/{eid}.{self.extension}"
         if eid not in EMOJI_LOCKS and os.path.isfile(file_name):
             os.remove(file_name)
 
@@ -187,8 +187,8 @@ class JumboGenerator:
         self.e_list = []
         self.number = JUMBO_NUM
 
-        if not os.path.isdir("emoji"):
-            os.mkdir("emoji")
+        if not os.path.isdir("/tmp/emoji"):
+            os.mkdir("/tmp/emoji")
 
     async def generate(self):
         try:
@@ -223,12 +223,12 @@ class JumboGenerator:
             result = Image.new('RGBA', (size * iterator.width, size * iterator.height))
             for info in iterator:
                 result.paste(*info)
-            result.save(f"emoji/jumbo{self.number}.png")
+            result.save(f"/tmp/emoji/jumbo{self.number}.png")
 
     async def send(self):
-        await self.ctx.send(file=discord.File(open(f"emoji/jumbo{self.number}.png", "rb"), filename="emoji.png"))
+        await self.ctx.send(file=discord.File(open(f"/tmp/emoji/jumbo{self.number}.png", "rb"), filename="emoji.png"))
 
     def cleanup(self):
         for eid, handler in self.e_list:
             handler.cleanup(eid)
-        os.remove(f"emoji/jumbo{self.number}.png")
+        os.remove(f"/tmp/emoji/jumbo{self.number}.png")
