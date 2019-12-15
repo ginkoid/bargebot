@@ -76,11 +76,10 @@ class Reminders(BaseCog):
                         to_remind=await Utils.clean(reminder, markdown=False, links=False, emoji=False),
                         time=time.time() + duration_seconds, status=ReminderStatus.Pending,
                         guild_id=ctx.guild.id if ctx.guild is not None else "@me", message_id=ctx.message.id)
-        now = datetime.fromtimestamp(time.time())
         if duration_seconds <= 10:
             self.handling.add(r.id)
             self.bot.loop.create_task(
-                self.run_after((r.time - now).total_seconds(), self.deliver(r)))
+                self.run_after(duration_seconds, self.deliver(r)))
         mode = "dm" if dm else "here"
         await MessageUtils.send_to(ctx, "YES", f"reminder_confirmation_{mode}", duration=duration.length,
                                      duration_identifier=duration.unit)
