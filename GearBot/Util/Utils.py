@@ -239,7 +239,9 @@ def chunks(l, n):
         yield l[i:i+n]
 
 async def get_commit():
-    _, out, __ = await execute('git rev-parse --short HEAD')
+    out = None
+    with open('version', 'r') as f:
+        out = f.read()
     return out
 
 def to_pretty_time(seconds, guild_id):
