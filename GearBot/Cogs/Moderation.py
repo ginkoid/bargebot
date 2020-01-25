@@ -787,10 +787,10 @@ class Moderation(BaseCog):
         embed.add_field(name=Translator.translate('account_created_at', ctx),
                         value=f"{(ctx.message.created_at - user.created_at).days} days ago (``{user.created_at}``)",
                         inline=True)
-        il = Infraction.select(Infraction.guild_id).where(Infraction.user_id == user.id).count()
-        ild = Infraction.select(Infraction.guild_id).distinct().where(Infraction.user_id == user.id).count()
-        emoji = "SINISTER" if il >= 2 else "INNOCENT"
-        embed.add_field(name=Translator.translate("infractions", ctx), value=MessageUtils.assemble(ctx, emoji, "total_infractions", total=il, servers=ild))
+        if ctx.guild is not None:
+            il = Infraction.select().where(Infraction.user_id == user.id, Infraction.guild_id == ctx.guild.id).count()
+            emoji = "SINISTER" if il >= 2 else "INNOCENT"
+            embed.add_field(name=Translator.translate("infractions", ctx), value=MessageUtils.assemble(ctx, emoji, "total_infractions", total=il))
 
         await ctx.send(embed=embed)
 

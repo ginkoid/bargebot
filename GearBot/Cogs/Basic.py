@@ -22,7 +22,6 @@ class Basic(BaseCog):
 
         Pages.register("help", self.init_help, self.update_help)
         self.running = True
-        self.bot.loop.create_task(self.taco_eater())
         self.bot.loop.create_task(self.selfrole_updater())
 
     def cog_unload(self):
@@ -37,7 +36,6 @@ class Basic(BaseCog):
         hours, remainder = divmod(int(uptime.total_seconds()), 3600)
         days, hours = divmod(hours, 24)
         minutes, seconds = divmod(remainder, 60)
-        tacos = str(round(self.bot.eaten))
         user_messages = str(self.bot.user_messages)
         bot_messages = str(self.bot.bot_messages)
         self_messages = str(self.bot.self_messages)
@@ -52,16 +50,10 @@ class Basic(BaseCog):
                               MessageUtils.assemble(ctx, 'STONE', 'about_commands', commandCount=self.bot.commandCount, custom_command_count=self.bot.custom_command_count) + "\n" +
                               MessageUtils.assemble(ctx, 'WOOD', 'about_guilds', guilds=len(self.bot.guilds)) + "\n" +
                               MessageUtils.assemble(ctx, 'INNOCENT', 'about_users', total=total, unique=unique) + "\n" +
-                              MessageUtils.assemble(ctx, 'TACO', 'about_tacos', tacos=tacos) + "\n" +
-                              MessageUtils.assemble(ctx, 'ALTER', 'commit_hash', hash=self.bot.version) + '\n' +
-                              MessageUtils.assemble(ctx, 'TODO', 'about_stats'))
+                              MessageUtils.assemble(ctx, 'ALTER', 'commit_hash', hash=self.bot.version) + "\n" +
+                              "[bargebot](https://github.com/ginkoid/bargebot), a fork of [GearBot](https://github.com/gearbot/GearBot)"
 
-        click_here = Translator.translate('click_here', ctx)
-        embed.add_field(name=Translator.translate('support_server', ctx), value=f"[{click_here}](https://discord.gg/vddW3D9)")
-        embed.add_field(name=Translator.translate('website', ctx), value=f"[{click_here}](https://gearbot.rocks)")
-        embed.add_field(name=f"Github", value=f"[{click_here}](https://github.com/gearbot/GearBot)")
         embed.set_footer(text=self.bot.user.name, icon_url=self.bot.user.avatar_url)
-
         await ctx.send(embed=embed)
 
     @commands.command(hidden=True)
@@ -246,30 +238,6 @@ class Basic(BaseCog):
         if role.id in roles:
             roles.remove(role.id)
             Configuration.save(role.guild.id)
-
-    async def taco_eater(self):
-        """A person can eat a taco every 5 mins, we run every 15s"""
-        GearbotLogging.info("Time to start munching on some 🌮")
-        while self.running:
-            self.bot.eaten += len(self.bot.users) / 20
-
-            # update stats in redis
-            await self.bot.redis_pool.hmset_dict("botstats", {
-                "start_time": str(self.bot.start_time),
-                "user_mesages": str(self.bot.user_messages),
-                "bot_messages": str(self.bot.bot_messages),
-                "own_messages": str(self.bot.self_messages),
-                "total_members": str(sum(len(guild.members) for guild in self.bot.guilds)),
-                "unique_members": str(len(self.bot.users)),
-                "taco_count": str(round(self.bot.eaten)),
-                "random_number": random.randint(0, 5000),
-                "commands_executed": str(self.bot.commandCount),
-                "custom_commands_executed": str(self.bot.custom_command_count),
-                "guilds": len(self.bot.guilds)
-            })
-
-            await asyncio.sleep(15)
-        GearbotLogging.info("Cog terminated, guess no more 🌮 for people")
 
     async def selfrole_updater(self):
         GearbotLogging.info("Selfrole view updater enabled")

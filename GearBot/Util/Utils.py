@@ -241,7 +241,7 @@ def chunks(l, n):
 async def get_commit():
     out = None
     with open('version', 'r') as f:
-        out = f.read()
+        out = f.read().strip()
     return out
 
 def to_pretty_time(seconds, guild_id):

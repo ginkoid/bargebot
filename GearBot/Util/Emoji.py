@@ -58,7 +58,6 @@ BACKUPS = {
     "SPY": "🕵",
     "STONE": "⚙",
     "STREAMING": "💜",
-    "TACO": "🌮",
     "THINK": "🤔",
     "TODO": "📋",
     "TRASH": "🗑",
