@@ -261,7 +261,7 @@ async def handle_database_error(bot):
     GearbotLogging.error(traceback.format_exc())
     # database trouble, notify bot owner
     message = f"{Emoji.get_chat_emoji('WARNING')} Peewee exception caught! attempting to reconnect to the database!"
-    await GearbotLogging.message_owner(bot, message)
+    await GearbotLogging.send_error_log(bot, message)
     await GearbotLogging.bot_log(message)
 
     try:
@@ -285,7 +285,7 @@ async def handle_database_error(bot):
                 with open("stage_2.txt", "w") as file:
                     file.write("stage_2")
                 message = f"{Emoji.get_chat_emoji('NO')} Reconnecting and bot rebooting failed, escalating to VM reboot"
-                await GearbotLogging.message_owner(bot, message)
+                await GearbotLogging.send_error_log(bot, message)
                 await GearbotLogging.bot_log(message)
                 data = {'type': 'reboot'}
                 async with aiohttp.ClientSession(headers={'Content-Type': 'application/json',
@@ -296,18 +296,18 @@ async def handle_database_error(bot):
 
             else:
                 message = f"{Emoji.get_chat_emoji('NO')} Reconnecting failed, escalating to reboot"
-                await GearbotLogging.message_owner(bot, message)
+                await GearbotLogging.send_error_log(bot, message)
                 await GearbotLogging.bot_log(message)
                 with open("stage_1.txt", "w") as file:
                     file.write("stage_1")
                 os.kill(os.getpid(), 9)
         else:
             message = f"{Emoji.get_chat_emoji('YES')} 2nd reconnection attempt successfully connected!"
-            await GearbotLogging.message_owner(bot, message)
+            await GearbotLogging.send_error_log(bot, message)
             await GearbotLogging.bot_log(message)
     else:
         message = f"{Emoji.get_chat_emoji('YES')} 1st reconnection attempt successfully connected!"
-        await GearbotLogging.message_owner(bot, message)
+        await GearbotLogging.send_error_log(bot, message)
         await GearbotLogging.bot_log(message)
 
 

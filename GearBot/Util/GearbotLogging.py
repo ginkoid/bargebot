@@ -465,9 +465,6 @@ async def log_task(guild_id, target):
     del LOG_QUEUE[target]
 
 
-async def message_owner(bot, message):
-    if bot.owner_id is None:
-        app = await bot.application_info()
-        bot.owner_id = app.owner.id
-    owner = bot.get_user(bot.owner_id)
-    await owner.send(message)
+async def send_error_log(bot, message):
+    channel = bot.get_channel(Configuration.get_master_var("BOT_LOG_CHANNEL"))
+    await channel.send(message)
