@@ -782,10 +782,10 @@ class Moderation(BaseCog):
                 embed.add_field(name=Translator.translate('all_roles', ctx), value=Translator.translate("no_roles", ctx))
 
             embed.add_field(name=Translator.translate('joined_at', ctx),
-                            value=f"{(ctx.message.created_at - member.joined_at).days} days ago (``{member.joined_at}``)",
+                            value=f"``{member.joined_at}`` ({(ctx.message.created_at - member.joined_at).days} days ago)",
                             inline=True)
         embed.add_field(name=Translator.translate('account_created_at', ctx),
-                        value=f"{(ctx.message.created_at - user.created_at).days} days ago (``{user.created_at}``)",
+                        value=f"``{user.created_at}`` ({(ctx.message.created_at - user.created_at).days} days ago)",
                         inline=True)
         if ctx.guild is not None:
             il = Infraction.select().where(Infraction.user_id == user.id, Infraction.guild_id == ctx.guild.id).count()
