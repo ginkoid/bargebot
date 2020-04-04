@@ -47,13 +47,6 @@ cog_permissions = {
         "commands": {}
     },
 
-    "BCVersionChecker": {
-        "min": 0,
-        "max": 6,
-        "required": 0,
-        "commands": {}
-    },
-
     "CustCommands": {
         "min": 0,
         "max": 6,

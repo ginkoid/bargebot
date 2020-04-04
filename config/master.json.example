@@ -19,7 +19,6 @@
     "ServerAdmin",
     "ModLog",
     "CustCommands",
-    "BCVersionChecker",
     "Reload",
     "ReactionHandler",
     "Censor",

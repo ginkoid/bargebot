@@ -60,13 +60,6 @@ def is_server(ctx, id):
     return ctx.guild is not None and ctx.guild.id == id
 
 
-def bc_only():
-    async def predicate(ctx):
-        return is_server(ctx, 309218657798455298)
-
-    return commands.check(predicate)
-
-
 def check_permission(command_object, guild, member):
     if guild is None:
         return 0 >= get_required(command_object, command_object.cog.permissions)
