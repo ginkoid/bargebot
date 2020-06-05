@@ -15,14 +15,9 @@ class Admin(BaseCog):
 
     def __init__(self, bot):
         super().__init__(bot)
-        Pages.register("eval", self.init_eval, self.update_eval)
-
-    def cog_unload(self):
-        Pages.unregister("eval")
 
     async def cog_check(self, ctx):
-        return await ctx.bot.is_owner(ctx.author) or ctx.author.id in Configuration.get_master_var("BOT_ADMINS", [])
-
+        return ctx.author.id in Configuration.get_master_var("BOT_ADMINS", [])
 
     @commands.command(hidden=True)
     async def restart(self, ctx):
@@ -43,75 +38,6 @@ class Admin(BaseCog):
             Configuration.load_master()
             await Configuration.initialize(self.bot)
         await ctx.send("Configs reloaded")
-
-    @commands.command(hidden=True)
-    async def eval(self, ctx:commands.Context, *, code: str):
-        output = None
-        env = {
-            'bot': self.bot,
-            'ctx': ctx,
-            'channel': ctx.channel,
-            'author': ctx.author,
-            'guild': ctx.guild,
-            'message': ctx.message
-        }
-
-        env.update(globals())
-
-        if code.startswith('```'):
-            code = "\n".join(code.split("\n")[1:-1])
-
-        out = io.StringIO()
-
-        to_compile = f'async def func():\n{textwrap.indent(code, "  ")}'
-
-        try:
-            exec(to_compile, env)
-        except Exception as e:
-            output = f'{e.__class__.__name__}: {e}'
-        else:
-            func = env['func']
-            try:
-                with contextlib.redirect_stdout(out):
-                    ret = await func()
-            except Exception as e:
-                value = out.getvalue()
-                output = f'{value}{traceback.format_exc()}'
-            else:
-                value = out.getvalue()
-                if ret is None:
-                    if value:
-                        output = value
-                else:
-                    output = f'{value}{ret}'
-        if output is not None:
-            await Pages.create_new(self.bot, "eval", ctx, pages="----NEW PAGE----".join(Pages.paginate(output)), code=code, trigger=ctx.message.id, sender=ctx.author.id)
-        else:
-            await ctx.message.add_reaction(Emoji.get_emoji("YES"))
-
-    async def init_eval(self, ctx, pages, **kwargs):
-        pages = pages.split("----NEW PAGE----")
-        page = pages[0]
-        num = len(pages)
-        return f"**Eval output 1/{num}**\n```py\n{page}```", None, num > 1,
-
-    async def update_eval(self, ctx, message, page_num, action, data):
-        if action == "REFRESH" and ctx is not None:
-            await ctx.invoke(self.eval, code=data.get("code"))
-        pages = data["pages"].split("----NEW PAGE----")
-        page, page_num = Pages.basic_pages(pages, page_num, action)
-        data["page"] = page_num
-        return f"**Eval output {page_num + 1}/{len(pages)}**\n```py\n{page}```", None, data
-
-
-    @commands.command(hidden=True)
-    async def post_info(self, ctx, name):
-        with open(f"{name}.txt", "r") as file:
-            pages = Pages.paginate("".join(file.readlines()), 500, 2000)
-            await ctx.channel.purge(limit=len(pages) + 2)
-            await ctx.send(file=discord.File(f"{name}.png"))
-            for page in pages:
-                await ctx.send(page)
 
     @commands.command()
     async def set_presence(self, ctx, name):
@@ -149,7 +75,7 @@ class Admin(BaseCog):
 
     @commands.command()
     async def pendingchanges(self, ctx):
-        await ctx.send(f'https://github.com/ginkoid/bargebot/compare/{self.bot.version}...master')
+        await ctx.send(f'<https://github.com/ginkoid/bargebot/compare/{self.bot.version}...master>')
 
 def setup(bot):
     bot.add_cog(Admin(bot))

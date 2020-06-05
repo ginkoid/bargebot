@@ -108,13 +108,6 @@ cog_permissions = {
         }
     },
 
-    "Minecraft": {
-        "min": 0,
-        "max": 6,
-        "required": 0,
-        "commands": {}
-    },
-
     "Moderation": {
         "min": 2,
         "max": 6,
