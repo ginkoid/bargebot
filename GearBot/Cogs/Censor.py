@@ -1,4 +1,5 @@
 import re
+import fnmatch
 from urllib import parse
 
 import discord
@@ -9,9 +10,6 @@ from discord.ext.commands import clean_content
 from Cogs.BaseCog import BaseCog
 from Util import Configuration, GearbotLogging, Permissioncheckers, Utils
 from Util.Matchers import INVITE_MATCHER
-
-
-
 
 class Censor(BaseCog):
 
@@ -72,7 +70,7 @@ class Censor(BaseCog):
         if not censored:
             content = content.lower()
             for bad in (w.lower() for w in blacklist):
-                if bad in content:
+                if fnmatch.fnmatch(content, f'*{bad}*'):
                     await self.censor_message(message, bad)
                     break
 

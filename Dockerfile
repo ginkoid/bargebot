@@ -1,11 +1,11 @@
 FROM python:3.7.5-slim-buster AS build
 
-ADD ./requirements.txt /app/requirements.txt
+COPY requirements.txt /app/requirements.txt
 WORKDIR /app
 
 RUN apt update && apt install build-essential zlib1g-dev libjpeg-dev git -y && pip install -r /app/requirements.txt
 
-ADD . /app
+COPY . .
 
 RUN git rev-parse HEAD > /app/version
 
