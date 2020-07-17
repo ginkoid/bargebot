@@ -69,8 +69,8 @@ class Censor(BaseCog):
 
         if not censored:
             content = content.lower()
-            for bad in (w.lower() for w in blacklist):
-                if fnmatch.fnmatch(content, f'*{bad}*'):
+            for bad in blacklist:
+                if fnmatch.fnmatchcase(content, f'*{bad.lower()}*'):
                     await self.censor_message(message, bad)
                     break
 
