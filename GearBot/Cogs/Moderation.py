@@ -826,7 +826,7 @@ class Moderation(BaseCog):
             messages = LoggedMessage.select().where(
                 (LoggedMessage.server == ctx.guild.id) & (LoggedMessage.channel == channel.id)).order_by(
                 LoggedMessage.messageid.desc()).limit(amount)
-            await Archive.ship_messages(ctx, messages, "channel", channel)
+            await Archive.ship_messages(ctx, messages, "channel", Utils.escape_markdown(channel.name))
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
     
@@ -842,10 +842,9 @@ class Moderation(BaseCog):
                 messages = LoggedMessage.select().where(
                     (LoggedMessage.server == ctx.guild.id) & (LoggedMessage.channel == channel.id)).order_by(
                     LoggedMessage.messageid.desc()).limit(amount)
-                await Archive.ship_messages(ctx, messages, "channel", channel)
+                await Archive.ship_messages(ctx, messages, "channel", Utils.escape_markdown(channel.name))
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
-
 
     @archive.command()
     async def user(self, ctx, user: UserID, amount=100):
@@ -858,7 +857,7 @@ class Moderation(BaseCog):
             messages = LoggedMessage.select().where(
                 (LoggedMessage.server == ctx.guild.id) & (LoggedMessage.author == user)).order_by(
                 LoggedMessage.messageid.desc()).limit(amount)
-            await Archive.ship_messages(ctx, messages, "user", user)
+            await Archive.ship_messages(ctx, messages, "user", Utils.username(user))
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
 

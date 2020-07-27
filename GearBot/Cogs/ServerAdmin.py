@@ -97,7 +97,17 @@ class ServerAdmin(BaseCog):
         Pages.register("blacklist", self._blacklist_init, self._blacklist_update)
         Pages.register("word_blacklist", self._word_blacklist_init, self._word_blacklist_update)
 
-
+    @commands.guild_only()
+    @commands.command(aliases=["deletecategorychildren", "deletecategory", "delete_category"])
+    @commands.bot_has_permissions(manage_channels=True)
+    async def delete_category_children(self, ctx: commands.Context, category: discord.CategoryChannel):
+        """delete_category_children_help"""
+        async def yes():
+            for channel in category.channels:
+                await channel.delete()
+            await category.delete()
+            await MessageUtils.send_to(ctx, "YES", "delete_category_children_done", category=Utils.escape_markdown(category.name))
+        await Confirmation.confirm(ctx, Translator.translate("delete_category_children_confirm", ctx, category=Utils.escape_markdown(category.name)), on_yes=yes)
 
     @commands.guild_only()
     @commands.group(aliases = ["config", "cfg"])
@@ -838,6 +848,8 @@ class ServerAdmin(BaseCog):
                 await member.remove_roles(role, reason=f"Mute feature has been disabled")
         Configuration.set_var(ctx.guild.id, "ROLES", "MUTE_ROLE", 0)
         await ctx.send("Mute feature has been disabled, all people muted have been unmuted and the role can now be removed.")
+    
+
 
     @configure.command()
     async def dm_on_warn(self, ctx, value: bool):

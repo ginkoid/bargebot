@@ -197,7 +197,7 @@
   "lvl4_removed": "{member} no longer has permission lvl 4 for the `{command}` command.",
   "did_not_have_lvl4": "{member} did not have lvl 4 permissions for the `{command}` command.",
   "purged_log": "Archived {count, plural, one {1 purged message} other {# purged messages}} from {channel}.",
-  "archived_count": "Gear minions have returned with {count, plural, one {1 message} other {# messages}} from {user_or_channel}.",
+  "archived_count": "Gear minions have returned with {count, plural, one {1 message} other {# messages}} from `{user_or_channel}`.",
   "archive_empty_user": "My gear minions have returned from their quest to the archives with empty hands. They looked and explored everywhere, slayed all the guardians guarding the secrets, then did it all over again just to make sure. But alas, nothing was found, it's as if that user never spoke while I was listening",
   "archive_empty_channel": "My gear minions have returned from their quest to the archives with empty hands. They looked and explored everywhere, slayed all the guardians guarding the secrets, then did it all over again just to make sure. But alas, nothing was found, it's as if nothing was ever said in that channel while I was listening",
   "archive_denied_read_perms": "Trying to archive a channel you don't have access to? Sorry, leek denied.",
@@ -783,5 +783,8 @@
   "too_many_roles": "Too many roles to show",
   "too_many_many_roles": "An absolute ridiculous amount of roles",
   "user_not_on_server": "This user is not on the server",
-  "unban_unable": "This user is on the server so can't be unbanned"
+  "unban_unable": "This user is on the server so can't be unbanned",
+  "delete_category_children_help": "Delete a category and all of its children channels",
+  "delete_category_children_confirm": "Are you sure you want to delete the entire category `{category}` and all of its children channels?",
+  "delete_category_children_done": "Successfully deleted category `{category}` and all of its children channels."
 }
