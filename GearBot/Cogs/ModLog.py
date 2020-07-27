@@ -59,7 +59,7 @@ class ModLog(BaseCog):
                             editCount = editCount + 1
                     count = count + 1
                     processing_times.append(time.perf_counter() - processing)
-                    if count % min(75, int(limit / 2)) is 0:
+                    if count % min(75, int((500 if limit is None else limit) / 2)) is 0:
                         await asyncio.sleep(0)
 
                 await asyncio.sleep(0)
