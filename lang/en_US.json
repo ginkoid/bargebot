@@ -784,7 +784,7 @@
   "too_many_many_roles": "An absolute ridiculous amount of roles",
   "user_not_on_server": "This user is not on the server",
   "unban_unable": "This user is on the server so can't be unbanned",
-  "delete_category_children_help": "Delete a category and all of its children channels",
-  "delete_category_children_confirm": "Are you sure you want to delete the entire category `{category}` and all of its children channels?",
-  "delete_category_children_done": "Successfully deleted category `{category}` and all of its children channels."
+  "delete_category_help": "Delete a category and all of its children channels",
+  "delete_category_confirm": "Are you sure you want to delete the entire category `{category}` and all of its children channels?",
+  "delete_category_done": "Successfully deleted category `{category}` and all of its children channels."
 }

@@ -98,16 +98,16 @@ class ServerAdmin(BaseCog):
         Pages.register("word_blacklist", self._word_blacklist_init, self._word_blacklist_update)
 
     @commands.guild_only()
-    @commands.command(aliases=["deletecategorychildren", "deletecategory", "delete_category"])
+    @commands.command(aliases=["deletecategory"])
     @commands.bot_has_permissions(manage_channels=True)
-    async def delete_category_children(self, ctx: commands.Context, category: discord.CategoryChannel):
-        """delete_category_children_help"""
+    async def delete_category(self, ctx: commands.Context, category: discord.CategoryChannel):
+        """delete_category_help"""
         async def yes():
             for channel in category.channels:
                 await channel.delete()
             await category.delete()
-            await MessageUtils.send_to(ctx, "YES", "delete_category_children_done", category=Utils.escape_markdown(category.name))
-        await Confirmation.confirm(ctx, Translator.translate("delete_category_children_confirm", ctx, category=Utils.escape_markdown(category.name)), on_yes=yes)
+            await MessageUtils.send_to(ctx, "YES", "delete_category_done", category=Utils.escape_markdown(category.name))
+        await Confirmation.confirm(ctx, Translator.translate("delete_category_confirm", ctx, category=Utils.escape_markdown(category.name)), on_yes=yes)
 
     @commands.guild_only()
     @commands.group(aliases = ["config", "cfg"])

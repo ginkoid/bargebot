@@ -857,7 +857,7 @@ class Moderation(BaseCog):
             messages = LoggedMessage.select().where(
                 (LoggedMessage.server == ctx.guild.id) & (LoggedMessage.author == user)).order_by(
                 LoggedMessage.messageid.desc()).limit(amount)
-            await Archive.ship_messages(ctx, messages, "user", Utils.username(user))
+            await Archive.ship_messages(ctx, messages, "user", await Utils.username(user))
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
 
