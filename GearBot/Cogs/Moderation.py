@@ -826,9 +826,26 @@ class Moderation(BaseCog):
             messages = LoggedMessage.select().where(
                 (LoggedMessage.server == ctx.guild.id) & (LoggedMessage.channel == channel.id)).order_by(
                 LoggedMessage.messageid.desc()).limit(amount)
-            await Archive.ship_messages(ctx, messages, "channel")
+            await Archive.ship_messages(ctx, messages, "channel", channel)
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
+    
+    @archive.command()
+    async def category(self, ctx, category: discord.CategoryChannel, amount=100):
+        """archive_category_help"""
+        if amount > 5000:
+            await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_too_much', ctx)}")
+            return
+        if Configuration.get_var(ctx.guild.id, "MESSAGE_LOGS", "ENABLED"):
+            await MessageUtils.send_to(ctx, 'SEARCH', 'searching_archives')
+            for channel in category.text_channels:
+                messages = LoggedMessage.select().where(
+                    (LoggedMessage.server == ctx.guild.id) & (LoggedMessage.channel == channel.id)).order_by(
+                    LoggedMessage.messageid.desc()).limit(amount)
+                await Archive.ship_messages(ctx, messages, "channel", channel)
+        else:
+            await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
+
 
     @archive.command()
     async def user(self, ctx, user: UserID, amount=100):
@@ -841,7 +858,7 @@ class Moderation(BaseCog):
             messages = LoggedMessage.select().where(
                 (LoggedMessage.server == ctx.guild.id) & (LoggedMessage.author == user)).order_by(
                 LoggedMessage.messageid.desc()).limit(amount)
-            await Archive.ship_messages(ctx, messages, "user")
+            await Archive.ship_messages(ctx, messages, "user", user)
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
 
