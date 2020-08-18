@@ -43,4 +43,4 @@ async def ship_messages(ctx, messages, t, user_or_channel):
         file = discord.File(fp=buffer, filename="message_archive.txt")
         await ctx.send(f"{Emoji.get_chat_emoji('YES')} {Translator.translate('archived_count', ctx, count=len(messages), user_or_channel=user_or_channel)}", file=file)
     else:
-        await ctx.send(f"{Emoji.get_chat_emoji('WARNING')} {Translator.translate(f'archive_empty_{t}', ctx)}")
+        await ctx.send(f"{Emoji.get_chat_emoji('WARNING')} {Translator.translate(f'archive_empty', ctx, user_or_channel=user_or_channel)}")

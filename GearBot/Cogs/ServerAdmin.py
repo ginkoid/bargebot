@@ -102,6 +102,16 @@ class ServerAdmin(BaseCog):
     @commands.bot_has_permissions(manage_channels=True)
     async def delete_category(self, ctx: commands.Context, category: discord.CategoryChannel):
         """delete_category_help"""
+        failures = []
+        if not category.permissions_for(ctx.guild.me).manage_channels:
+            failures.append(f'{Utils.clean_name(category.name)} ({category.id})')
+        for channel in category.channels:
+            if not channel.permissions_for(ctx.guild.me).manage_channels:
+                failures.append(f'#{Utils.clean_name(channel.name)} ({channel.id})')
+        if len(failures) > 0:
+            await Pages.create_new(self.bot, "mass_failures", ctx, action="delete_category",
+                        failures="----NEW PAGE----".join(Pages.paginate("\n".join(failures))))
+            return
         async def yes():
             for channel in category.channels:
                 await channel.delete()

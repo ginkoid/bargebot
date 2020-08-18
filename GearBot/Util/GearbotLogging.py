@@ -11,7 +11,6 @@ from queue import Queue
 
 import discord
 import pytz
-import sentry_sdk
 from aiohttp import ClientOSError, ServerDisconnectedError
 from discord import ConnectionClosed
 from discord.ext import commands
@@ -260,11 +259,6 @@ def before_send(event, hint):
 
 
 def init_logger():
-    # track commits to make sentry versions
-    dsn = Configuration.get_master_var('SENTRY_DSN', '')
-    if dsn != '':
-        sentry_sdk.init(dsn, before_send=before_send)
-
     LOGGER.setLevel(logging.DEBUG)
 
     DISCORD_LOGGER.setLevel(logging.DEBUG)

@@ -25,9 +25,9 @@ create table loggedmessage
 
 create table loggedattachment
 (
-    id        bigint primary key not null,
-    name      varchar(100)       not null,
-    isImage   bool               not null,
+    id        bigint primary key                      not null,
+    name      varchar(128) collate utf8mb4_general_ci not null,
+    isImage   bool                                    not null,
     messageid bigint references loggedmessage (messageid),
     index (messageid)
 );
@@ -68,7 +68,7 @@ create table userinfo
 
 create table dashsession
 (
-    id      varchar(50) primary key not null, #i'd name this token, but tortoise said no
+    id      varchar(50) primary key not null,
     user_id    bigint                  not null references userinfo (id),
     expires_at datetime                not null,
     index (user_id)
