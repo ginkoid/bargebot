@@ -2,7 +2,7 @@ import asyncio
 import datetime
 import time
 import typing
-from typing import Optional
+from typing import Optional, Union
 
 import discord
 from discord import Object, Emoji, Forbidden, NotFound, ActivityType
@@ -814,24 +814,30 @@ class Moderation(BaseCog):
                 f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_subcommand', ctx, prefix=ctx.prefix)}")
 
     @archive.command()
-    async def channel(self, ctx, channel: discord.TextChannel = None, amount=100):
+    async def channel(self, ctx, channel: Union[discord.TextChannel, int] = None, amount=5000):
         """archive_channel_help"""
         if amount > 5000:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_too_much', ctx)}")
             return
         if channel is None:
             channel = ctx.message.channel
+        if isinstance(channel, int):
+            channel_id = channel
+            channel_name = str(channel)
+        else:
+            channel_id = channel.id
+            channel_name = channel.name
         if Configuration.get_var(ctx.guild.id, "MESSAGE_LOGS", "ENABLED"):
             await MessageUtils.send_to(ctx, 'SEARCH', 'searching_archives')
             messages = LoggedMessage.select().where(
-                (LoggedMessage.server == ctx.guild.id) & (LoggedMessage.channel == channel.id)).order_by(
+                (LoggedMessage.server == ctx.guild.id) & (LoggedMessage.channel == channel_id)).order_by(
                 LoggedMessage.messageid.desc()).limit(amount)
-            await Archive.ship_messages(ctx, messages, "channel", Utils.escape_markdown(channel.name))
+            await Archive.ship_messages(ctx, messages, "channel", Utils.escape_markdown(channel_name))
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
     
     @archive.command()
-    async def category(self, ctx, category: discord.CategoryChannel, amount=100):
+    async def category(self, ctx, category: discord.CategoryChannel, amount=5000):
         """archive_category_help"""
         if amount > 5000:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_too_much', ctx)}")
@@ -847,7 +853,7 @@ class Moderation(BaseCog):
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
 
     @archive.command()
-    async def user(self, ctx, user: UserID, amount=100):
+    async def user(self, ctx, user: UserID, amount=5000):
         """archive_user_help"""
         if amount > 5000:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_too_much', ctx)}")

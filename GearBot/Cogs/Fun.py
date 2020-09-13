@@ -7,7 +7,6 @@ from discord.ext import commands
 
 from Cogs.BaseCog import BaseCog
 from Util import Configuration, MessageUtils, Translator, Utils
-from Util.Converters import ApexPlatform
 from Util.JumboGenerator import JumboGenerator
 
 
