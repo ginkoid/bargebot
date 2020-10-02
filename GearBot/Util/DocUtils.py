@@ -1,7 +1,7 @@
 import os
 import re
 
-from Util import Configuration, Pages, GearbotLogging, Permissioncheckers, Translator
+from Util import Configuration, Pages, GearbotLogging, Permissioncheckers, Translator, Utils
 
 image_pattern = re.compile("(?:!\[)([A-z ]+)(?:\]\()(?:\.*/*)(.*)(?:\))(.*)")
 
@@ -49,3 +49,23 @@ def gen_command_listing(bot, cog, command, code):
         GearbotLogging.error(command.qualified_name)
         raise ex
     return listing
+
+def gen_command_listing2(bot, cog, command):
+    command_listing = dict()
+    try:
+        perm_lvl = Permissioncheckers.get_perm_dict(command.qualified_name.split(' '), cog.permissions)['required']
+        command_listing["commandlevel"] = perm_lvl
+        command_listing["description"] = command.short_doc
+        command_listing["aliases"] = command.aliases
+        example = bot.help_command.get_command_signature(command).strip()
+        parts = str(example).split(' ')
+        parts[0] = ''.join(parts[0][1:])
+        for i in range(0, len(parts)):
+            if "[" == parts[i][0] and "|" in parts[i]:
+                parts[i] = ''.join(parts[i].split('|')[0][1:])
+        command_listing["example"] = '!' + ' '.join(parts)
+        command_listing["subcommands"] = {}
+        return command_listing
+    except Exception as ex:
+        GearbotLogging.error(command.qualified_name)
+        raise ex

@@ -3,7 +3,7 @@ import time
 from collections import namedtuple
 from datetime import datetime
 
-from discord import Object, HTTPException, MessageType
+from discord import Object, HTTPException, MessageType, AllowedMentions
 
 from Util import Translator, Emoji, Archive
 from database import DBUtils
@@ -24,7 +24,7 @@ async def get_message_data(bot, message_id):
         if len(parts) is 6:
             message = Message(message_id, int(parts["author"]), parts["content"], int(parts["channel"]), int(parts["server"]), [attachment(a.split("/")[0], a.split("/")[1]) for a in parts["attachments"].split("|")] if len(parts["attachments"]) > 0 else [], type=int(parts["type"]) if "type" in parts else None, pinned=parts["pinned"] == '1')
     if message is None:
-        message = LoggedMessage.get_or_none(LoggedMessage.messageid == message_id)
+        message = await LoggedMessage.get_or_none(messageid = message_id).prefetch_related("attachments")
     return message
 
 async def insert_message(bot, message, redis=True):
@@ -42,7 +42,7 @@ async def insert_message(bot, message, redis=True):
             pipe.hmset_dict(f"messages:{message.id}", type=message_type)
         pipe.expire(f"messages:{message.id}", 5*60+2)
         await pipe.execute()
-    DBUtils.insert_message(message)
+    await DBUtils.insert_message(message)
 
 async def update_message(bot, message_id, content, pinned):
     if is_cache_enabled(bot) and not Object(message_id).created_at <= datetime.utcfromtimestamp(time.time() - 5 * 60):
@@ -50,7 +50,7 @@ async def update_message(bot, message_id, content, pinned):
         pipe.hmset_dict(f"messages:{message_id}", content=content)
         pipe.hmset_dict(f"messages:{message_id}", pinned=(1 if pinned else 0))
         await pipe.execute()
-    LoggedMessage.update(content=content, pinned=pinned).where(LoggedMessage.messageid == message_id).execute()
+    await LoggedMessage.filter(messageid=message_id).update(content=content, pinned=pinned)
 
 def assemble(destination, emoji, m, translate=True, **kwargs):
     translated = Translator.translate(m, destination, **kwargs) if translate else m
@@ -69,7 +69,7 @@ async def archive_purge(bot, id_list, guild_id):
 
 async def send_to(destination, emoji, message, delete_after=None, translate=True, embed=None, **kwargs):
     translated = Translator.translate(message, destination.guild, **kwargs) if translate else message
-    return await destination.send(f"{Emoji.get_chat_emoji(emoji)} {translated}", delete_after=delete_after, embed=embed)
+    return await destination.send(f"{Emoji.get_chat_emoji(emoji)} {translated}", delete_after=delete_after, embed=embed, allowed_mentions=AllowedMentions(everyone=False, users=True, roles=False))
 
 async def try_edit(message, emoji: str, string_name: str, embed=None, **kwargs):
     translated = Translator.translate(string_name, message.channel, **kwargs)
@@ -84,4 +84,4 @@ def day_difference(a, b, location):
     return Translator.translate('days_ago', location, days=diff.days, date=a)
 
 def construct_jumplink(guild_id, channel_id, message_id):
-    return f"https://discordapp.com/channels/{guild_id}/{channel_id}/{message_id}"
+    return f"https://discord.com/channels/{guild_id}/{channel_id}/{message_id}"

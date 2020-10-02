@@ -1,6 +1,7 @@
 import asyncio
 import re
 import typing
+from datetime import datetime
 
 import discord
 from discord.ext import commands
@@ -15,15 +16,15 @@ from Util.Converters import UserID, Reason, InfSearchLocation, ServerInfraction,
 class Infractions(BaseCog):
 
     @staticmethod
-    async def _warn(ctx, target, *, reason, message=True):
-        i = InfractionUtils.add_infraction(ctx.guild.id, target.id, ctx.author.id, "Warn", reason)
+    async def _warn(ctx, target, *, reason, message=True, dm_action=True):
+        i = await InfractionUtils.add_infraction(ctx.guild.id, target.id, ctx.author.id, "Warn", reason)
         name = Utils.clean_user(target)
         if message:
             await MessageUtils.send_to(ctx, 'YES', 'warning_added', user=name, inf=i.id)
         aname = Utils.clean_user(ctx.author)
         GearbotLogging.log_key(ctx.guild.id, 'warning_added_modlog', user=name, moderator=aname, reason=reason,
                                user_id=target.id, moderator_id=ctx.author.id, inf=i.id)
-        if Configuration.get_var(ctx.guild.id, "INFRACTIONS", "DM_ON_WARN"):
+        if Configuration.get_var(ctx.guild.id, "INFRACTIONS", "DM_ON_WARN") and dm_action:
             try:
                 dm_channel = await target.create_dm()
                 await dm_channel.send(
@@ -48,7 +49,12 @@ class Infractions(BaseCog):
 
             message = MessageUtils.assemble(ctx, "THINK", "warn_to_feedback")
             await Confirmation.confirm(ctx, message, on_yes=yes)
-
+            return 
+        
+        if member.discriminator == '0000':
+            await MessageUtils.send_to(ctx, 'NO', 'cant_warn_system_user')
+            return
+                        
         if member.bot:
             await MessageUtils.send_to(ctx, "THINK", "cant_warn_bot")
             return
@@ -66,7 +72,7 @@ class Infractions(BaseCog):
         async def yes():
             pmessage = await MessageUtils.send_to(ctx, "REFRESH", "processing")
             failures = await Actions.mass_action(ctx, "warning", targets, self._warn, max_targets=10, allow_bots=False,
-                                                 message=False, reason=reason)
+                                                 message=False, reason=reason, dm_action=True)
 
             await pmessage.delete()
             await MessageUtils.send_to(ctx, "YES", "mwarn_confirmation", count=len(targets) - len(failures))
@@ -135,9 +141,11 @@ class Infractions(BaseCog):
         """inf_update_help"""
         infraction.mod_id = ctx.author.id
         infraction.reason = reason
-        infraction.save()
+        await infraction.save()
         await MessageUtils.send_to(ctx, 'YES', 'inf_updated', id=infraction.id)
         InfractionUtils.clear_cache(ctx.guild.id)
+        user = await Utils.get_user(infraction.user_id)
+        GearbotLogging.log_key(ctx.guild.id, "inf_update_log", inf=infraction.id, user=Utils.clean_user(user), userid=user.id, mod=Utils.clean_user(ctx.author), modid=ctx.author.id, reason=reason)
 
     @inf.command(aliases=["del", "remove"])
     async def delete(self, ctx: commands.Context, infraction: ServerInfraction):
@@ -147,7 +155,7 @@ class Infractions(BaseCog):
         mod = await Utils.get_user(infraction.mod_id)
 
         async def yes():
-            infraction.delete_instance()
+            await infraction.delete()
             await MessageUtils.send_to(ctx, "YES", "inf_delete_deleted", id=infraction.id)
             GearbotLogging.log_key(ctx.guild.id, 'inf_delete_log', id=infraction.id, target=Utils.clean_user(target),
                                    target_id=target.id, mod=Utils.clean_user(mod), mod_id=mod.id if mod is not None else 0, reason=reason,
@@ -162,7 +170,7 @@ class Infractions(BaseCog):
     async def claim(self, ctx, infraction: ServerInfraction):
         """inf_claim_help"""
         infraction.mod_id = ctx.author.id
-        infraction.save()
+        await infraction.save()
         await MessageUtils.send_to(ctx, 'YES', 'inf_claimed', inf_id=infraction.id)
         InfractionUtils.clear_cache(ctx.guild.id)
 
@@ -175,14 +183,14 @@ class Infractions(BaseCog):
         """inf_info_help"""
         embed = discord.Embed(color=0x00cea2,
                               description=f"**{Translator.translate('reason', ctx)}**\n{infraction.reason}",
-                              timestamp=infraction.start)
+                              timestamp=datetime.fromtimestamp(infraction.start))
         user = await Utils.get_user(infraction.user_id)
         mod = await Utils.get_user(infraction.mod_id)
         key = f"inf_{infraction.type.lower().replace(' ', '_')}"
         if infraction.end is None:
             duration = Translator.translate("unknown_duration", ctx)
         else:
-            time = (infraction.end - infraction.start).total_seconds()
+            time = (datetime.fromtimestamp(infraction.end) - datetime.fromtimestamp(infraction.start)).total_seconds()
             duration = Utils.to_pretty_time(time, ctx.guild.id)
 
         embed.set_author(
@@ -194,9 +202,9 @@ class Infractions(BaseCog):
         embed.add_field(name=Translator.translate('user', ctx), value=Utils.clean_user(user))
         embed.add_field(name=Translator.translate('mod_id', ctx), value=infraction.mod_id)
         embed.add_field(name=Translator.translate('user_id', ctx), value=infraction.user_id)
-        embed.add_field(name=Translator.translate('inf_added', ctx), value=infraction.start)
+        embed.add_field(name=Translator.translate('inf_added', ctx), value=datetime.fromtimestamp(infraction.start))
         if infraction.end is not None:
-            embed.add_field(name=Translator.translate('inf_end', ctx), value=infraction.end)
+            embed.add_field(name=Translator.translate('inf_end', ctx), value=datetime.fromtimestamp(infraction.end))
         embed.add_field(name=Translator.translate('inf_active', ctx),
                         value=MessageUtils.assemble(ctx, 'YES' if infraction.active else 'NO',
                                                     str(infraction.active).lower()))

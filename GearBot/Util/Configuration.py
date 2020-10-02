@@ -303,6 +303,48 @@ def v22(config):
         config["PERM_OVERRIDES"]["ServerAdmin"] =config["PERM_OVERRIDES"]["Serveradmin"]
         del config["PERM_OVERRIDES"]["Serveradmin"]
 
+def v23(config):
+    config["CENSORING"]["DOMAIN_WHITELIST"] = False
+    config["CENSORING"]["DOMAIN_LIST"] = []
+
+def v24(config):
+    config["CENSORING"]["WORD_CENSORLIST"] = config["CENSORING"]["WORD_BLACKLIST"]
+    del config["CENSORING"]["WORD_BLACKLIST"]
+    config["CENSORING"]["TOKEN_CENSORLIST"] = config["CENSORING"]["TOKEN_BLACKLIST"]
+    del config["CENSORING"]["TOKEN_BLACKLIST"]
+    config["CENSORING"]["ALLOWED_INVITE_LIST"] = config["CENSORING"]["INVITE_WHITELIST"]
+    del config["CENSORING"]["INVITE_WHITELIST"]
+    config["CENSORING"]["DOMAIN_LIST_ALLOWED"] = config["CENSORING"]["DOMAIN_WHITELIST"]
+    del config["CENSORING"]["DOMAIN_WHITELIST"]
+    config["CENSORING"]["ROLE_LIST_MODE"] = config["ROLES"]["ROLE_WHITELIST"]
+    del config["ROLES"]["ROLE_WHITELIST"]
+
+def v25(config):
+    if "ROLE_LIST_MODE" in config["CENSORING"].keys():
+        config["ROLES"]["ROLE_LIST_MODE"] = config["CENSORING"]["ROLE_LIST_MODE"]
+        del config["CENSORING"]["ROLE_LIST_MODE"]
+        
+def v26(config):
+    config["INFRACTIONS"]["DM_ON_UNMUTE"] = False
+    config["INFRACTIONS"]["DM_ON_MUTE"] = False
+    config["INFRACTIONS"]["DM_ON_KICK"] = False
+    config["INFRACTIONS"]["DM_ON_BAN"] = False
+    config["INFRACTIONS"]["DM_ON_TEMPBAN"] = False
+
+
+def v27(config):
+    config["CENSORING"]["FULL_MESSAGE_LIST"] = []
+    config["CENSORING"]["CENSOR_EMOJI_ONLY_MESSAGES"] = False
+
+def v28(config):
+    config["CUSTOM_COMMANDS"] = {
+        "ROLES": [],
+        "ROLE_REQUIRED": False,
+        "CHANNELS": [],
+        "CHANNELS_IGNORED": True,
+        "MOD_BYPASS": True
+    }
+
 def add_logging(config, *args):
     for cid, info in config["LOG_CHANNELS"].items():
         if "FUTURE_LOGS" in info:
@@ -323,9 +365,8 @@ def move_keys(config, section, *keys):
             config[section][key] = config[key]
             del config[key]
 
-
 # migrators for the configs, do NOT increase the version here, this is done by the migration loop
-MIGRATORS = [initial_migration, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22]
+MIGRATORS = [initial_migration, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v25, v26, v27, v28]
 
 BOT = None
 
@@ -431,7 +472,7 @@ def save(id):
 
 def load_persistent():
     global PERSISTENT_LOADED, PERSISTENT
-    PERSISTENT = Utils.fetch_from_disk('persistent')
+    PERSISTENT = Utils.fetch_from_disk('config/persistent')
     PERSISTENT_LOADED = True
 
 
@@ -443,4 +484,4 @@ def get_persistent_var(key, default):
 
 def set_persistent_var(key, value):
     PERSISTENT[key] = value
-    Utils.save_to_disk("persistent", PERSISTENT)
+    Utils.save_to_disk("config/persistent", PERSISTENT)

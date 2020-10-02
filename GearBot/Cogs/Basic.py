@@ -83,7 +83,7 @@ class Basic(BaseCog):
                     await MessageUtils.send_to(ctx, 'NO', 'quote_nsfw_refused')
                 else:
                     attachment = None
-                    attachments = LoggedAttachment.select().where(LoggedAttachment.messageid == message.id)
+                    attachments = await LoggedAttachment.filter(message_id=message.id)
                     if len(attachments) == 1:
                         attachment = attachments[0]
                     embed = discord.Embed(colour=discord.Color(0xd5fff),

@@ -2,10 +2,8 @@ import asyncio
 import time
 
 from discord.ext.commands import AutoShardedBot
-from prometheus_client import CollectorRegistry
 
 from Bot import TheRealGearBot
-from Util.PromMonitors import PromMonitors
 
 
 class GearBot(AutoShardedBot):
@@ -23,18 +21,14 @@ class GearBot(AutoShardedBot):
     redis_pool = None
     aiosession = None
     being_cleaned = dict()
-    metrics_reg = CollectorRegistry()
     version = ""
     dash_guild_users = set()
     dash_guild_watchers = dict()
 
     def __init__(self, *args, loop=None, **kwargs):
         super().__init__(*args, loop=loop, **kwargs)
-        self.metrics = PromMonitors(self)
 
     def dispatch(self, event_name, *args, **kwargs):
-        if "socket" not in event_name not in ["message_edit"]:
-            self.metrics.bot_event_counts.labels(event_name=event_name).inc()
         super().dispatch(event_name, *args, **kwargs)
 
     async def _run_event(self, coro, event_name, *args, **kwargs):

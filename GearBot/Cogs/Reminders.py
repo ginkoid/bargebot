@@ -9,7 +9,7 @@ from Bot import TheRealGearBot
 from Cogs.BaseCog import BaseCog
 from Util import Utils, GearbotLogging, Emoji, Translator, MessageUtils, server_info
 from Util.Converters import Duration, ReminderText
-from database.DatabaseConnector import Reminder, ReminderStatus
+from database.DatabaseConnector import Reminder
 
 
 class Reminders(BaseCog):
@@ -44,9 +44,9 @@ class Reminders(BaseCog):
             return
         if ctx.guild is not None:
             message = f'{Emoji.get_chat_emoji("QUESTION")} {Translator.translate("remind_question", ctx)}'
-            one = Emoji.get_emoji("1")
-            two = Emoji.get_emoji("2")
-            no = Emoji.get_emoji("NO")
+            one = str(Emoji.get_emoji("1"))
+            two = str(Emoji.get_emoji("2"))
+            no = str(Emoji.get_emoji("NO"))
             embed = Embed(description=f"""
 {Emoji.get_chat_emoji("1")} {Translator.translate("remind_option_here", ctx)}
 {Emoji.get_chat_emoji("2")} {Translator.translate("remind_option_dm", ctx)}
@@ -57,25 +57,24 @@ class Reminders(BaseCog):
                 await m.add_reaction(e)
 
             try:
-                reaction, user = await ctx.bot.wait_for('reaction_add', timeout=30, check=lambda reaction,
-                                                                                                 user: user == ctx.message.author and reaction.emoji in [one, two, no])
+                reaction = await ctx.bot.wait_for('raw_reaction_add', timeout=30, check=lambda reaction: reaction.user_id == ctx.message.author.id and str(reaction.emoji) in [one, two, no])
             except asyncio.TimeoutError:
                 await MessageUtils.send_to(ctx, "NO", "confirmation_timeout", timeout=30)
                 return
             else:
-                if reaction.emoji == no:
+                if str(reaction.emoji) == no:
                     await MessageUtils.send_to(ctx, "NO", "command_canceled")
                     return
                 else:
-                    dm = reaction.emoji == two
+                    dm = str(reaction.emoji) == two
             finally:
                 await m.delete()
 
         else:
             dm = True
-        r = Reminder.create(user_id=ctx.author.id, channel_id=ctx.channel.id, dm=dm,
+        r = await Reminder.create(user_id=ctx.author.id, channel_id=ctx.channel.id, dm=dm,
                         to_remind=await Utils.clean(reminder, markdown=False, links=False, emoji=False),
-                        time=time.time() + duration_seconds, status=ReminderStatus.Pending,
+                        time=time.time() + duration_seconds, send=datetime.now().timestamp(), status=1,
                         guild_id=ctx.guild.id if ctx.guild is not None else "@me", message_id=ctx.message.id)
         if duration_seconds <= 10:
             self.handling.add(r.id)
@@ -86,18 +85,18 @@ class Reminders(BaseCog):
                                      duration_identifier=duration.unit)
 
     async def delivery_service(self):
-        GearbotLogging.info("📬 Starting reminder delivery background task 📬")
+        GearbotLogging.info("Starting reminder delivery background task")
         while self.running:
-            now = datetime.fromtimestamp(time.time())
-            limit = datetime.fromtimestamp(time.time() + 30)
+            now = time.time()
+            limit = datetime.fromtimestamp(time.time() + 30).timestamp()
 
-            for r in Reminder.select().where(Reminder.time <= limit, Reminder.status == ReminderStatus.Pending):
+            for r in await Reminder.filter(time__lt = limit, status = 1):
                 if r.id not in self.handling:
                     self.handling.add(r.id)
                     self.bot.loop.create_task(
-                        self.run_after((r.time - now).total_seconds(), self.deliver(r)))
+                        self.run_after(r.time - now, self.deliver(r)))
             await asyncio.sleep(10)
-        GearbotLogging.info("📪 Reminder delivery background task terminated 📪")
+        GearbotLogging.info("Reminder delivery background task terminated")
 
     async def run_after(self, delay, action):
         if delay > 0:
@@ -111,9 +110,9 @@ class Reminders(BaseCog):
         first = dm if r.dm else channel
         alternative = channel if r.dm else dm
 
-        new_status = ReminderStatus.Delivered if (await self.attempt_delivery(first, r) or await self.attempt_delivery(alternative, r)) else ReminderStatus.Failed
+        new_status = 2 if (await self.attempt_delivery(first, r) or await self.attempt_delivery(alternative, r)) else 3
         r.status = new_status
-        r.save()
+        await r.save()
 
     async def attempt_delivery(self, location, package):
         try:
@@ -125,7 +124,7 @@ class Reminders(BaseCog):
                 jumplink_available = MessageUtils.construct_jumplink(package.guild_id, package.channel_id, package.message_id)
             mode = "dm" if isinstance(location, User) else "channel"
             now = datetime.utcfromtimestamp(time.time())
-            send_time = datetime.utcfromtimestamp(package.send.timestamp())
+            send_time = datetime.utcfromtimestamp(package.send)
             parts = {
                 "date": send_time.strftime('%c'),
                 "timediff": server_info.time_difference(now, send_time, None if isinstance(location, User) or isinstance(location, DMChannel) else location.guild.id),

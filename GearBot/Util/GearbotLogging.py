@@ -12,7 +12,7 @@ from queue import Queue
 import discord
 import pytz
 from aiohttp import ClientOSError, ServerDisconnectedError
-from discord import ConnectionClosed
+from discord import ConnectionClosed, AllowedMentions
 from discord.ext import commands
 
 from Bot import TheRealGearBot
@@ -32,15 +32,19 @@ todo = namedtuple("TODO", "message embed file")
 LOGGING_INFO = {
     "CENSORED_MESSAGES": {
         "censor_fail": {
-            "censor_message_failed": "WARNING",
-            "censor_message_failed_word": "WARNING",
+            "censored_message_failed": "WARNING",
+            "censored_message_failed_word": "WARNING",
             "invite_censor_fail": "WARNING",
-            "invite_censor_forbidden": "WARNING"
+            "invite_censor_forbidden": "WARNING",
+            "censored_message_failed_content": "WARNING"
         },
         "censored": {
             "censored_invite": "WARNING",
             "censored_message": "WARNING",
-            "censored_message_word": "WARNING"
+            "censored_message_word": "WARNING",
+            "censored_message_domain_blocked": "WARNING",
+            "censored_message_content": "WARNING",
+            "censored_message_emoji_only": "WARNING"
         }
     },
     "CHANNEL_CHANGES": {
@@ -116,7 +120,8 @@ LOGGING_INFO = {
     "MOD_ACTIONS": {
         "ban": {
             "ban_log": "BAN",
-            "manual_ban_log": "BAN"
+            "manual_ban_log": "BAN",
+            "ban_could_not_dm": "WARNING" 
         },
         "errors": {
             "mute_reapply_failed_log": "WARNING",
@@ -128,28 +133,37 @@ LOGGING_INFO = {
         },
         "forceban_log": "BAN",
         "inf_delete_log": "DELETE",
-        "kick_log": "BOOT",
+        "kick_log": {
+            "kick_log": "BOOT",
+            "kick_could_not_dm": "WARNING" 
+        },
         "mute_log": {
             "mute_duration_added_log": "MUTE",
             "mute_duration_extended_log": "MUTE",
             "mute_duration_overwritten_log": "MUTE",
-            "mute_log": "MUTE"
+            "mute_log": "MUTE",
+            "mute_could_not_dm": "WARNING" 
         },
         "mute_reapply_log": "BAD_USER",
         "softban_log": "BAN",
         "tempban_lifted": "INNOCENT",
         "tempban_log": "BAN",
+        "tempban_could_not_dm": "WARNING",
         "unban": {
             "manual_unban_log": "INNOCENT",
             "unban_log": "INNOCENT"
         },
         "unmute_modlog": "INNOCENT",
-        "unmuted": "INNOCENT",
+        "unmuted": {
+            "unmuted": "INNOCENT",
+            "unmute_could_not_dm": "WARNING"
+        },
         "verification_log": "WRENCH",
         "warning": {
             "warning_added_modlog": "WARNING",
             "warning_could_not_dm": "WARNING"
-        }
+        },
+        "inf_update_log": "WARNING"
     },
     "NAME_CHANGES": {
         "nickname": {
@@ -440,10 +454,10 @@ async def log_task(guild_id, target):
                 to_send = f'{to_send}\n{todo.message if todo.message is not None else ""}'
             else:
                 # too large, send it out
-                await channel.send(to_send)
+                await channel.send(to_send, allowed_mentions=AllowedMentions(everyone=False, users=False, roles=False))
                 to_send = todo.message
             if todo.embed is not None or todo.file is not None or LOG_QUEUE[target].empty():
-                await channel.send(to_send, embed=todo.embed, file=todo.file)
+                await channel.send(to_send, embed=todo.embed, file=todo.file, allowed_mentions=AllowedMentions(everyone=False, users=False, roles=False))
                 to_send = ""
         except discord.Forbidden:
             # someone screwed up their permissions, not my problem, will show an error in the dashboard

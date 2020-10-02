@@ -20,6 +20,8 @@ async def act(ctx, name, target, handler, allow_bots=True, require_on_server=Tru
             return False, message
         else:
             user = ctx.bot.get_user(target)
+    if user is None and not require_on_server:
+        user = await Utils.get_user(target)
     if user is None:
         return False, "Unknown user"
     allowed, message = can_act(name, ctx, user, require_on_server=require_on_server, action_bot=allow_bots, check_bot_ability=check_bot_ability)
@@ -42,6 +44,9 @@ async def mass_action(ctx, name, targets, handler, allow_duplicates=False, allow
         return
     failed = []
     handled = set()
+    if kwargs["dm_action"] and len(targets) > 5:
+        await MessageUtils.send_to(ctx, "NO", "mass_action_too_many_people_dm", max=5)
+        kwargs["dm_action"]=False
     for target in targets:
         if not allow_duplicates and target in handled:
             failed.append(f"{target}: {Translator.translate('mass_action_duplicate', ctx)}")

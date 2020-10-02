@@ -73,4 +73,3 @@ create table dashsession
     expires_at datetime                not null,
     index (user_id)
 )
-

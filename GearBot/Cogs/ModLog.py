@@ -35,45 +35,29 @@ class ModLog(BaseCog):
         editCount = 0
         count = 0
         no_access = 0
-        fetch_times = []
-        processing_times = []
         for channel in guild.text_channels:
             permissions = channel.permissions_for(guild.get_member(self.bot.user.id))
             if permissions.read_messages and permissions.read_message_history:
 
                 async for message in channel.history(limit=limit, oldest_first=False):
-                    processing = time.perf_counter()
                     if not self.running:
                         GearbotLogging.info("Cog unloaded while still building cache, aborting.")
                         return
-                    fetch = time.perf_counter()
-                    logged = LoggedMessage.get_or_none(messageid=message.id)
-                    fetch_times.append(time.perf_counter() - fetch)
+                    logged = await LoggedMessage.get_or_none(messageid=message.id)
                     if logged is None:
                         await MessageUtils.insert_message(self.bot, message, redis=False)
                         newCount = newCount + 1
                     elif message.edited_at is not None:
                         if logged.content != message.content:
                             logged.content = message.content
-                            logged.save()
+                            await logged.save()
                             editCount = editCount + 1
                     count = count + 1
-                    processing_times.append(time.perf_counter() - processing)
-                    if count % min(75, int((500 if limit is None else limit) / 2)) is 0:
-                        await asyncio.sleep(0)
-
-                await asyncio.sleep(0)
             else:
                 no_access += 1
         GearbotLogging.info(
             f"Discovered {newCount} new messages and {editCount} edited in {guild.name} (checked {count})")
-        total_fetch_time = sum(fetch_times)
-        avg_fetch_time = (total_fetch_time / len(fetch_times)) * 1000
-        total_processing = (sum(processing_times)) * 1000
-        avg_processing = total_processing / len(processing_times)
-        GearbotLogging.info(f"Average fetch time: {avg_fetch_time} (total fetch time: {total_fetch_time})")
-        GearbotLogging.info(f"Average processing time: {avg_processing} (total of {total_processing})")
-        GearbotLogging.info(f"Was unable to read messages from {no_access} channels")
+
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -250,7 +234,7 @@ class ModLog(BaseCog):
                             reason = Translator.translate("no_reason", member.guild.id)
                         else:
                             reason = entry.reason
-                        i = InfractionUtils.add_infraction(member.guild.id, entry.target.id, entry.user.id, "Kick", reason,
+                        i = await InfractionUtils.add_infraction(member.guild.id, entry.target.id, entry.user.id, "Kick", reason,
                                                        active=False)
                         GearbotLogging.log_key(member.guild.id, 'kick_log', user=Utils.clean_user(member), user_id=member.id, moderator=Utils.clean_user(entry.user), moderator_id=entry.user.id, reason=reason, inf=i.id)
                         return
@@ -270,9 +254,7 @@ class ModLog(BaseCog):
         if fid in self.bot.data["forced_exits"]:
             return
         self.bot.data["forced_exits"].add(fid)
-        Infraction.update(active=False).where((Infraction.user_id == user.id) &
-                                              (Infraction.type == "Unban") &
-                                              (Infraction.guild_id == guild.id)).execute()
+        await Infraction.filter(user_id=user.id, type="Unban", guild_id=guild.id).update(active=False)
         limit = datetime.datetime.utcfromtimestamp(time.time() - 60)
         log = await self.find_log(guild, AuditLogAction.ban, lambda e: e.target == user and e.created_at > limit)
         if log is None:
@@ -284,10 +266,10 @@ class ModLog(BaseCog):
                 reason = Translator.translate("no_reason", guild.id)
             else:
                 reason = log.reason
-            i = InfractionUtils.add_infraction(guild.id, log.target.id, log.user.id, "Ban", reason)
+            i = await InfractionUtils.add_infraction(guild.id, log.target.id, log.user.id, "Ban", reason)
             GearbotLogging.log_key(guild.id, 'ban_log', user=Utils.clean_user(user), user_id=user.id, moderator=Utils.clean_user(log.user), moderator_id=log.user.id, reason=reason, inf=i.id)
         else:
-            i = InfractionUtils.add_infraction(guild.id, user.id, 0, "Ban", "Manual ban")
+            i = await InfractionUtils.add_infraction(guild.id, user.id, 0, "Ban", "Manual ban")
             GearbotLogging.log_key(guild.id, 'manual_ban_log', user=Utils.clean_user(user), user_id=user.id, inf=i.id)
 
     @commands.Cog.listener()
@@ -298,9 +280,7 @@ class ModLog(BaseCog):
             return
         elif not Features.is_logged(guild.id, "MOD_ACTIONS"):
             return
-        Infraction.update(active=False).where((Infraction.user_id == user.id) &
-                                              (Infraction.type == "Ban") &
-                                              (Infraction.guild_id == guild.id)).execute()
+        await Infraction.filter(user_id=user.id, type="Ban", guild_id=guild.id).update(active=False)
 
         limit = datetime.datetime.utcfromtimestamp(time.time() - 60)
         log = await self.find_log(guild, AuditLogAction.unban, lambda e: e.target == user and e.created_at > limit)
@@ -308,13 +288,13 @@ class ModLog(BaseCog):
             # this fails way to often for my liking, alternative is adding a delay but this seems to do the trick for now
             log = await self.find_log(guild, AuditLogAction.unban, lambda e: e.target == user and e.created_at > limit)
         if log is not None:
-            i = InfractionUtils.add_infraction(guild.id, user.id, log.user.id, "Unban", "Manual unban")
+            i = await InfractionUtils.add_infraction(guild.id, user.id, log.user.id, "Unban", "Manual unban")
             GearbotLogging.log_key(guild.id, 'unban_log', user=Utils.clean_user(user), user_id=user.id,
                                    moderator=log.user, moderator_id=log.user.id, reason='Manual unban', inf=i.id)
 
 
         else:
-            i = InfractionUtils.add_infraction(guild.id, user.id, 0, "Unban", "Manual ban")
+            i = await InfractionUtils.add_infraction(guild.id, user.id, 0, "Unban", "Manual ban")
             GearbotLogging.log_key(guild.id, 'manual_unban_log', user=Utils.clean_user(user), user_id=user.id, inf=i.id)
 
     @commands.Cog.listener()
@@ -653,6 +633,7 @@ async def cache_task(modlog: ModLog):
             ctx = modlog.bot.to_cache.pop(0)
             await modlog.buildCache(ctx.guild)
             await ctx.send("Caching complete.")
+            ctx = None
         await asyncio.sleep(1)
     GearbotLogging.info("modlog background task terminated.")
 

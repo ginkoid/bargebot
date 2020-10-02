@@ -85,13 +85,6 @@ cog_permissions = {
         }
     },
 
-    "Fun": {
-        "min": 0,
-        "max": 6,
-        "required": 0,
-        "commands": {}
-    },
-
     "Infractions": {
         "min": 2,
         "max": 6,
