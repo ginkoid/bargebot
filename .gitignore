@@ -3,15 +3,5 @@ __pycache__
 *$py.class
 /venv
 /logs
+/config
 /version
-
-!/config/bot.json
-!/config/shared.json
-!/config/en_US.json
-/config/*.json
-/config/backups
-
-!/lang/bot.json
-!/lang/shared.json
-!/lang/en_US.json
-/lang/*.json
