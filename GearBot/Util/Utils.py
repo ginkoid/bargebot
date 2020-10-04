@@ -231,11 +231,14 @@ def chunks(l, n):
     for i in range(0, len(l), n):
         yield l[i:i+n]
 
-async def get_commit():
-    out = None
-    with open('version', 'r') as f:
-        out = f.read().strip()
-    return out
+def get_commit():
+    commit = 'dev'
+    try:
+        with open('version', 'r') as f:
+            commit = f.read().strip()
+    except:
+        pass
+    return commit
 
 def to_pretty_time(seconds, guild_id):
     partcount = 0

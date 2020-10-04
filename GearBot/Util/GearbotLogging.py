@@ -76,7 +76,6 @@ LOGGING_INFO = {
     },
     "CONFIG_CHANGES": {
         "config_change": "WRENCH",
-        "config_dash_security_change": "WRENCH",
         "mute_role_changes": {
             "config_mute_cleanup_complete": "WRENCH",
             "config_mute_cleanup_failed": "WRENCH",

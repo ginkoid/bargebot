@@ -626,10 +626,6 @@ class ServerAdmin(BaseCog):
                 del channels[e]
             Configuration.save(ctx.guild.id)
 
-    @logging.command()
-    async def dash(self, ctx):
-        await ctx.send(embed=self.get_logging_status(ctx))
-
     def get_logging_status(self, ctx):
         enabled = f"{Emoji.get_chat_emoji('YES')} {Translator.translate('enabled', ctx)}"
         disabled = f"{Emoji.get_chat_emoji('NO')} {Translator.translate('disabled', ctx)}"
@@ -1216,7 +1212,7 @@ class ServerAdmin(BaseCog):
             await MessageUtils.send_to(ctx, 'NO', f'custom_commands_channel_already_on_{mode}_list')
         else:
             channels.append(channel.id)
-            await MessageUtils.send_to(ctx, 'YES', f'custom_commands_channel_added_{mode}', channel=channel.mention)
+            await MessageUtils.send_to(ctx, 'YES', f'custom_ccensortrustedbypassommands_channel_added_{mode}', channel=channel.mention)
             Configuration.save(ctx.guild.id)
 
     @custom_commands_channel_list.command("remove")
@@ -1244,7 +1240,7 @@ class ServerAdmin(BaseCog):
 
     @configure.command()
     async def custom_commands_mod_bypass(self, ctx, value: bool):
-        """custom_commands_mod_bypass"""
+        """custom_commands_mod_bypass_help"""
         Configuration.set_var(ctx.guild.id, "CUSTOM_COMMANDS", "MOD_BYPASS", value)
         await ctx.send(
             f"{Emoji.get_chat_emoji('YES')} {Translator.translate('custom_commands_mod_bypass_' + ('enabled' if value else 'disabled'), ctx.guild.id)}")

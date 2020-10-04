@@ -4,7 +4,6 @@ import json
 import threading
 
 import urllib.parse
-import requests
 from parsimonious import ParseError, VisitationError
 from pyseeyou import format
 

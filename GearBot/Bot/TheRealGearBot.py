@@ -15,7 +15,7 @@ from discord.abc import PrivateChannel
 from discord.ext import commands
 
 from Util import Configuration, GearbotLogging, Emoji, Pages, Utils, Translator, InfractionUtils, MessageUtils, \
-    server_info, DashConfig
+    server_info
 from database import DatabaseConnector
 
 
@@ -48,7 +48,7 @@ async def initialize(bot, startup=False):
         }
         await GearbotLogging.initialize(bot, Configuration.get_master_var("BOT_LOG_CHANNEL"))
         if startup:
-            c = await Utils.get_commit()
+            c = Utils.get_commit()
             bot.version = c
             GearbotLogging.info(f"GearBot spinning up version {c}")
             await GearbotLogging.bot_log(f"{Emoji.get_chat_emoji('ALTER')} GearBot spinning up version {c}")
@@ -73,7 +73,6 @@ async def initialize(bot, startup=False):
         await Translator.initialize(bot)
         bot.being_cleaned.clear()
         await Configuration.initialize(bot)
-        DashConfig.initialize(bot)
     except Exception as ex:
         #make sure we always unlock, even when something went wrong!
         bot.locked = False
