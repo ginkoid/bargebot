@@ -26,14 +26,9 @@ if __name__ == '__main__':
             members=True,
             bans=True,
             emojis=True,
-            integrations=False,
-            webhooks=False,
-            invites=False,
             voice_states=True,
-            presences=False,
             messages=True,
-            reactions=True,
-            typing=False,
+            reactions=True
         ),
         "member_cache_flags": MemberCacheFlags(
             online=False,
