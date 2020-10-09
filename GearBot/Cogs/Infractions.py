@@ -129,7 +129,7 @@ class Infractions(BaseCog):
         # inform user we are working on it
         message = await MessageUtils.send_to(ctx, 'SEARCH', 'inf_search_compiling')
         parts = await InfractionUtils.inf_update(message, query, fields, amount, 0)
-        await ReactionManager.register(self.bot, message.id, message.channel.id, "inf_search", **parts)
+        await ReactionManager.register(self.bot, message.id, message.channel.id, "inf_search", duration=60 * 60 * 24, **parts)
         pipe = self.bot.redis_pool.pipeline()
         pipe.sadd(f"inf_track:{ctx.guild.id}", message.id)
         pipe.expire(f"inf_track:{ctx.guild.id}", 60 * 60 * 24)

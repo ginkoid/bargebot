@@ -20,8 +20,7 @@ async def create_self_roles(bot, ctx):
     # track in redis
     pipe = bot.redis_pool.pipeline()
     pipe.sadd(f"self_role:{ctx.guild.id}", message.id)
-    bot.loop.create_task(
-        ReactionManager.register(bot, message.id, ctx.channel.id, "self_role", duration=60 * 60 * 24 * 7, pipe=pipe))
+    bot.loop.create_task(ReactionManager.register(bot, message.id, ctx.channel.id, "self_role", pipe=pipe))
     bot.loop.create_task(update_reactions(message, pages[0], len(pages) > 1))
 
     # cleanup

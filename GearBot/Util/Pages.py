@@ -22,7 +22,7 @@ async def create_new(bot, type, ctx, **kwargs):
     text, embed, has_pages = await page_handlers[type]["init"](ctx, **kwargs)
     message: discord.Message = await ctx.channel.send(text, embed=embed)
     if has_pages:
-        await ReactionManager.register(bot, message.id, message.channel.id, "paged", subtype=type, **kwargs)
+        await ReactionManager.register(bot, message.id, message.channel.id, "paged", subtype=type, duration=60 * 60 * 24, **kwargs)
         try:
             if has_pages: await message.add_reaction(Emoji.get_emoji('LEFT'))
             if has_pages: await message.add_reaction(Emoji.get_emoji('RIGHT'))

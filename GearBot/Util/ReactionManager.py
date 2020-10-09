@@ -85,7 +85,6 @@ async def self_roles(bot, message, user_id, reaction, **kwargs):
                                              page_count=len(pages)), colour=Colour(0xbffdd), description=pages[page_num])
     await message.edit(embed=embed)
     await Selfroles.update_reactions(message, pages[page_num], len(pages) > 1)
-    bot.loop.create_task(bot.redis_pool.expire(f"self_role:{message.channel.guild.id}", int(kwargs.get("duration", 60 * 60 * 24 * 7))))
     return kwargs
 
 async def inf_search(bot, message, user_id, reaction, **kwargs):
@@ -110,7 +109,9 @@ async def register(bot, message_id, channel_id, type, pipe=None, **kwargs):
         pipe = bot.redis_pool.pipeline()
     key = f"reactor:{message_id}"
     pipe.hmset_dict(key, message_id=message_id, channel_id=channel_id, type=type, **kwargs)
-    pipe.expire(key, kwargs.get("duration", 60*60*24))
+    duration = kwargs.get("duration")
+    if duration is not None:
+        pipe.expire(key, duration)
     await pipe.execute()
 
 
@@ -145,7 +146,9 @@ async def on_reaction(bot, message_id, channel_id, user_id, reaction):
             if new_info is not None:
                 pipeline = bot.redis_pool.pipeline()
                 pipeline.hmset_dict(key, **new_info)
-                pipeline.expire(key, int(info.get("duration", 60*60*24)))
+                duration = info.get("duration")
+                if duration is not None:
+                    pipeline.expire(key, int(duration))
                 pipeline.expire(f"inf_track:{channel.guild.id}", 60*60*24)
                 await pipeline.execute()
 
