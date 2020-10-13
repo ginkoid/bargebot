@@ -2,9 +2,6 @@
 import discord.http
 discord.http.Route.BASE = 'https://discord.com/api/v6'
 
-import os
-from argparse import ArgumentParser
-
 from Bot import TheRealGearBot
 from Bot.GearBot import GearBot
 from Util import Configuration, GearbotLogging
@@ -34,7 +31,8 @@ if __name__ == '__main__':
             online=False,
             voice=True,
             joined=True,
-        )
+        ),
+        "chunk_guilds_at_startup": False
     }
     gearbot = GearBot(**args)
     gearbot.remove_command("help")

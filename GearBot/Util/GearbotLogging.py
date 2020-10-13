@@ -1,12 +1,10 @@
 import io
 import logging
-import os
 import sys
 import traceback
 from collections import namedtuple
 from concurrent.futures import CancelledError
 from datetime import datetime
-from logging.handlers import TimedRotatingFileHandler
 from queue import Queue
 
 import discord
@@ -120,7 +118,7 @@ LOGGING_INFO = {
         "ban": {
             "ban_log": "BAN",
             "manual_ban_log": "BAN",
-            "ban_could_not_dm": "WARNING" 
+            "ban_could_not_dm": "WARNING"
         },
         "errors": {
             "mute_reapply_failed_log": "WARNING",
@@ -134,14 +132,14 @@ LOGGING_INFO = {
         "inf_delete_log": "DELETE",
         "kick_log": {
             "kick_log": "BOOT",
-            "kick_could_not_dm": "WARNING" 
+            "kick_could_not_dm": "WARNING"
         },
         "mute_log": {
             "mute_duration_added_log": "MUTE",
             "mute_duration_extended_log": "MUTE",
             "mute_duration_overwritten_log": "MUTE",
             "mute_log": "MUTE",
-            "mute_could_not_dm": "WARNING" 
+            "mute_could_not_dm": "WARNING"
         },
         "mute_reapply_log": "BAD_USER",
         "softban_log": "BAN",

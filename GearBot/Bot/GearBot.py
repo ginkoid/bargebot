@@ -1,5 +1,4 @@
 import asyncio
-import time
 
 from discord.ext.commands import AutoShardedBot
 
@@ -22,6 +21,10 @@ class GearBot(AutoShardedBot):
     aiosession = None
     being_cleaned = dict()
     version = ""
+    shard_count = 1
+    shard_ids = [],
+    missing_guilds = []
+    initial_fill_complete = False
 
     def __init__(self, *args, loop=None, **kwargs):
         super().__init__(*args, loop=loop, **kwargs)
@@ -46,7 +49,7 @@ class GearBot(AutoShardedBot):
         await TheRealGearBot.on_message(self, message)
 
     async def on_guild_join(self, guild):
-        await TheRealGearBot.on_guild_join(guild)
+        await TheRealGearBot.on_guild_join(self, guild)
 
     async def on_guild_remove(self, guild):
         await TheRealGearBot.on_guild_remove(guild)

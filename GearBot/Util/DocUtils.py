@@ -1,7 +1,7 @@
 import os
 import re
 
-from Util import Configuration, Pages, GearbotLogging, Permissioncheckers, Translator, Utils
+from Util import Configuration, Pages, GearbotLogging, Permissioncheckers, Translator
 
 image_pattern = re.compile("(?:!\[)([A-z ]+)(?:\]\()(?:\.*/*)(.*)(?:\))(.*)")
 

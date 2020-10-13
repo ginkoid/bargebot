@@ -1,9 +1,3 @@
-import asyncio
-import hashlib
-import json
-import threading
-
-import urllib.parse
 from parsimonious import ParseError, VisitationError
 from pyseeyou import format
 

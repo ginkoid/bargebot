@@ -1,5 +1,4 @@
 import discord
-from discord import Member
 from discord.ext import commands
 
 from Cogs.BaseCog import BaseCog

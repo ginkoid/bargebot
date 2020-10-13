@@ -11,7 +11,7 @@ import discord
 import math
 from discord import NotFound
 
-from Util import GearbotLogging, Translator, Emoji
+from Util import GearbotLogging, Translator
 from Util.Matchers import ROLE_ID_MATCHER, CHANNEL_ID_MATCHER, ID_MATCHER, EMOJI_MATCHER, URL_MATCHER
 
 BOT = None
@@ -241,6 +241,7 @@ def get_commit():
     return commit
 
 def to_pretty_time(seconds, guild_id):
+    seconds = round(seconds)
     partcount = 0
     parts = {
         'weeks': 60 * 60 * 24 * 7,
@@ -250,6 +251,10 @@ def to_pretty_time(seconds, guild_id):
         'seconds': 1
     }
     duration = ""
+
+    if seconds == 0:
+       return Translator.translate("seconds", guild_id, amount=0)
+
 
     for k, v in parts.items():
         if seconds / v >= 1:

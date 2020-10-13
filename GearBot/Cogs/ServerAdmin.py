@@ -515,6 +515,8 @@ class ServerAdmin(BaseCog):
                     embed.add_field(name=cid, value=self.get_channel_properties(ctx, cid, info["CATEGORIES"]))
 
                 await ctx.send(embed=embed)
+            else:
+                await ctx.send(embed=self.get_logging_status(ctx))
 
     @staticmethod
     def get_channel_properties(ctx, cid, info):
@@ -625,6 +627,10 @@ class ServerAdmin(BaseCog):
             for e in empty:
                 del channels[e]
             Configuration.save(ctx.guild.id)
+
+    @logging.command()
+    async def dash(self, ctx):
+        await ctx.send(embed=self.get_logging_status(ctx))
 
     def get_logging_status(self, ctx):
         enabled = f"{Emoji.get_chat_emoji('YES')} {Translator.translate('enabled', ctx)}"
@@ -853,7 +859,7 @@ class ServerAdmin(BaseCog):
                 await member.remove_roles(role, reason=f"Mute feature has been disabled")
         Configuration.set_var(ctx.guild.id, "ROLES", "MUTE_ROLE", 0)
         await ctx.send("Mute feature has been disabled, all people muted have been unmuted and the role can now be removed.")
-    
+
 
 
     @configure.command()
@@ -862,8 +868,8 @@ class ServerAdmin(BaseCog):
         Configuration.set_var(ctx.guild.id, "INFRACTIONS", "DM_ON_WARN", value)
         await ctx.send(
             f"{Emoji.get_chat_emoji('YES')} {Translator.translate('dm_on_warn_msg_' + ('enabled' if value else 'disabled'), ctx.guild.id)}")
-    
-    @configure.command()            
+
+    @configure.command()
     async def dm_on_kick(self, ctx, value: bool):
         """dm_on_kick_help"""
         Configuration.set_var(ctx.guild.id, "INFRACTIONS", "DM_ON_KICK", value)

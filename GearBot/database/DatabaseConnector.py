@@ -78,7 +78,24 @@ class RaidAction(Model):
 
 async def init():
     await Tortoise.init(
-        db_url=f"mysql://{Configuration.get_master_var('DATABASE_USER')}:{Configuration.get_master_var('DATABASE_PASS')}@{Configuration.get_master_var('DATABASE_HOST')}:{Configuration.get_master_var('DATABASE_PORT')}/{Configuration.get_master_var('DATABASE_NAME')}",
-        modules={"models": ["database.DatabaseConnector"]}
+        config={
+            'connections': {
+                'default': {
+                    'engine': 'tortoise.backends.mysql',
+                    'credentials': {
+                        'host': Configuration.get_master_var('DATABASE_HOST'),
+                        'port': Configuration.get_master_var('DATABASE_PORT'),
+                        'user': Configuration.get_master_var('DATABASE_USER'),
+                        'password': Configuration.get_master_var('DATABASE_PASS'),
+                        'database': Configuration.get_master_var('DATABASE_NAME')
+                    }
+                }
+            },
+            'apps': {
+                'models': {
+                    'models': ['database.DatabaseConnector']
+                }
+            }
+        }
     )
     await Tortoise.generate_schemas()

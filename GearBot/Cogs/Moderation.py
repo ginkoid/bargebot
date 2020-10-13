@@ -5,7 +5,7 @@ import typing
 from typing import Optional, Union
 
 import discord
-from discord import Object, Emoji, Forbidden, NotFound, ActivityType
+from discord import Object, Emoji, Forbidden, NotFound
 from discord.ext import commands
 from discord.ext.commands import BadArgument, Greedy, MemberConverter, RoleConverter, MissingPermissions
 
@@ -16,7 +16,7 @@ from Util import Configuration, Utils, GearbotLogging, Pages, InfractionUtils, E
 from Util.Actions import ActionFailed
 from Util.Converters import BannedMember, UserID, Reason, Duration, DiscordUser, PotentialID, RoleMode, Guild, \
     RangedInt, Message, RangedIntBan, VerificationLevel, Nickname
-from Util.Permissioncheckers import bot_has_guild_permission
+from Util.Permissioncheckers import bot_has_guild_permission, require_cache
 from database.DatabaseConnector import LoggedMessage, Infraction
 
 
@@ -78,17 +78,19 @@ class Moderation(BaseCog):
             await MessageUtils.send_to(ctx, "SPY", "seen_fail", user_id=user.id, user=Utils.clean_user(user))
         else:
             await MessageUtils.send_to(ctx, "EYES", "seen_success", user_id=user.id, user=Utils.clean_user(user), date=Object(messages[0].messageid).created_at)
-    
+
     @commands.group(aliases=["nick"])
     @commands.guild_only()
     @commands.bot_has_permissions(manage_nicknames=True)
+    @require_cache()
     async def nickname(self, ctx: commands.Context):
         """mod_nickname_help"""
         if ctx.subcommand_passed is None:
             await ctx.invoke(self.bot.get_command("help"), query="nickname")
-    
+
     @nickname.command("add", aliases=["set", "update", "edit"])
     @commands.bot_has_permissions(manage_nicknames=True)
+    @require_cache()
     async def nickname_add(self, ctx, user: discord.Member, *, nick:Nickname):
         """mod_nickname_add_help"""
         try:
@@ -116,6 +118,7 @@ class Moderation(BaseCog):
 
     @nickname.command("remove", aliases=["clear", "nuke", "reset"])
     @commands.bot_has_permissions(manage_nicknames=True)
+    @require_cache()
     async def nickname_remove(self, ctx, user: discord.Member):
         """mod_nickname_remove_help"""
         if user.nick is None:
@@ -133,11 +136,11 @@ class Moderation(BaseCog):
             await MessageUtils.send_to(ctx, "YES", "mod_nickname_nuked", user_id=user.id, user=Utils.clean_user(user))
 
             GearbotLogging.log_key(
-                ctx.guild.id, 
-                "mod_nickname_removed", 
-                user=name, 
+                ctx.guild.id,
+                "mod_nickname_removed",
+                user=name,
                 user_id=user.id,
-                before=before_clean, 
+                before=before_clean,
                 moderator=mod_name,
                 moderator_id=ctx.author.id
             )
@@ -148,6 +151,7 @@ class Moderation(BaseCog):
     @commands.group()
     @commands.guild_only()
     @commands.bot_has_permissions(manage_roles=True)
+    @require_cache()
     async def role(self, ctx: commands.Context):
         """mod_role_help"""
         if ctx.subcommand_passed is None:
@@ -186,12 +190,14 @@ class Moderation(BaseCog):
 
     @role.command()
     @commands.bot_has_permissions(manage_roles=True)
+    @require_cache()
     async def add(self, ctx, user: discord.Member, *, role: str):
         """role_add_help"""
         await self.role_handler(ctx, user, role, "add")
 
     @role.command(aliases=["rmv"])
     @commands.bot_has_permissions(manage_roles=True)
+    @require_cache()
     async def remove(self, ctx, user: discord.Member, *, role: str):
         """role_remove_help"""
         await self.role_handler(ctx, user, role, "remove")
@@ -199,16 +205,17 @@ class Moderation(BaseCog):
     @commands.command(aliases=["👢"])
     @commands.guild_only()
     @commands.bot_has_permissions(kick_members=True)
+    @require_cache()
     async def kick(self, ctx, user: discord.Member, *, reason: Reason = ""):
         """kick_help"""
         if reason == "":
             reason = Translator.translate("no_reason", ctx.guild.id)
 
         await Actions.act(ctx, "kick", user.id, self._kick, reason=reason, message=True)
-                    
+
     async def _kick(self, ctx, user, reason, message, dm_action=True):
         self.bot.data["forced_exits"].add(f"{ctx.guild.id}-{user.id}")
-        
+
         name = Utils.clean_user(user)
         if Configuration.get_var(ctx.guild.id, "INFRACTIONS", "DM_ON_KICK") and dm_action:
             try:
@@ -217,7 +224,7 @@ class Moderation(BaseCog):
             except (discord.HTTPException, AttributeError):
                 GearbotLogging.log_key(ctx.guild.id, 'kick_could_not_dm', user=name,
                                        userid=user.id)
-        
+
         await ctx.guild.kick(user,
                              reason=Utils.trim_message(
                                  f"Moderator: {ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) Reason: {reason}",
@@ -225,7 +232,7 @@ class Moderation(BaseCog):
         i = await InfractionUtils.add_infraction(ctx.guild.id, user.id, ctx.author.id, 'Kick', reason, active=False)
         GearbotLogging.log_key(ctx.guild.id, 'kick_log', user=Utils.clean_user(user), user_id=user.id,
                                moderator=Utils.clean_user(ctx.author), moderator_id=ctx.author.id,
-                               reason=reason, inf=i.id)                    
+                               reason=reason, inf=i.id)
         if message:
             await MessageUtils.send_to(ctx, "YES", "kick_confirmation", ctx.guild.id, user=Utils.clean_user(user),
                                        user_id=user.id, reason=reason, inf=i.id)
@@ -267,6 +274,7 @@ class Moderation(BaseCog):
 
     @commands.guild_only()
     @commands.command()
+    @require_cache()
     async def bean(self, ctx, user: discord.Member, *, reason: Reason = ""):
         """bean_help"""
         if reason == "":
@@ -286,14 +294,15 @@ class Moderation(BaseCog):
     @commands.command(aliases=["🚪"])
     @commands.guild_only()
     @commands.bot_has_permissions(ban_members=True, add_reactions=True)
+    @require_cache()
     async def ban(self, ctx: commands.Context, user: DiscordUser, *, reason: Reason = ""):
         """ban_help"""
         if reason == "":
             reason = Translator.translate("no_reason", ctx.guild.id)
-                        
+
         if ctx.guild.get_member(user.id) is not None:
             member = ctx.guild.get_member(user.id)
-            await self._ban_command(ctx, member, reason, 0)                    
+            await self._ban_command(ctx, member, reason, 0)
         else:
 
             try:
@@ -310,6 +319,7 @@ class Moderation(BaseCog):
     @commands.command(aliases=["clean_ban"])
     @commands.guild_only()
     @commands.bot_has_permissions(ban_members=True)
+    @require_cache()
     async def cleanban(self, ctx: commands.Context, user: DiscordUser, days: Optional[RangedIntBan]=1, *, reason: Reason = ""):
         """clean_ban_help"""
         await self._ban_command(ctx, user, reason, days)
@@ -329,6 +339,7 @@ class Moderation(BaseCog):
     @commands.command()
     @commands.guild_only()
     @commands.bot_has_permissions(ban_members=True)
+    @require_cache()
     async def tempban(self, ctx: commands.Context, user: DiscordUser, duration: Duration, *, reason: Reason = ""):
         """tempban_help"""
         if duration.unit is None:
@@ -356,7 +367,7 @@ class Moderation(BaseCog):
                     except (discord.HTTPException, AttributeError):
                         GearbotLogging.log_key(ctx.guild.id, 'tempban_could_not_dm', user=name,
                                             userid=user.id)
-                                            
+
                 self.bot.data["forced_exits"].add(f"{ctx.guild.id}-{user.id}")
                 await ctx.guild.ban(user, reason=Utils.trim_message(
                     f"Moderator: {ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) Reason: {reason}", 500),
@@ -376,7 +387,7 @@ class Moderation(BaseCog):
 
     async def _ban(self, ctx, user, reason, confirm, days=0, dm_action=True):
         self.bot.data["forced_exits"].add(f"{ctx.guild.id}-{user.id}")
-                            
+
         name = Utils.clean_user(user)
         if Configuration.get_var(ctx.guild.id, "INFRACTIONS", "DM_ON_BAN") and dm_action:
             try:
@@ -385,7 +396,7 @@ class Moderation(BaseCog):
             except (discord.HTTPException, AttributeError):
                 GearbotLogging.log_key(ctx.guild.id, 'ban_could_not_dm', user=name,
                                        userid=user.id)
-                    
+
         await ctx.guild.ban(user, reason=Utils.trim_message(
             f"Moderator: {ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) Reason: {reason}", 500),
                             delete_message_days=days)
@@ -419,6 +430,7 @@ class Moderation(BaseCog):
     @commands.guild_only()
     @commands.command(aliases=["🚪🚪"])
     @commands.bot_has_permissions(ban_members=True, add_reactions=True)
+    @require_cache()
     async def mban(self, ctx, targets: Greedy[PotentialID], *, reason: Reason = ""):
         """mban_help"""
         if reason == "":
@@ -457,7 +469,7 @@ class Moderation(BaseCog):
             await Confirmation.confirm(ctx, Translator.translate("munban_confirm", ctx), on_yes=yes)
         else:
             await Utils.empty_list(ctx, "unban")
-    
+
     @commands.guild_only()
     @commands.command(aliases=["mcb"])
     @commands.bot_has_permissions(ban_members=True, add_reactions=True)
@@ -465,14 +477,14 @@ class Moderation(BaseCog):
         """mcleanban_help"""
         if reason == "":
             reason = Translator.translate("no_reason", ctx.guild.id)
-        
+
         async def yes():
             pmessage = await MessageUtils.send_to(ctx, "REFRESH", "processing")
             valid = 0
             failures = []
             filtered = []
             for t in targets:
-                if t not in filtered: 
+                if t not in filtered:
                     filtered.append(t)
                 else:
                     await MessageUtils.send_to(ctx, "NO", "mcleanban_duplicates", t=t)
@@ -507,6 +519,7 @@ class Moderation(BaseCog):
     @commands.command(aliases=["softban"])
     @commands.guild_only()
     @commands.bot_has_permissions(ban_members=True)
+    @require_cache()
     async def cleankick(self, ctx: commands.Context, user: discord.Member, *, reason: Reason = ""):
         """softban_help"""
         if reason == "":
@@ -545,7 +558,7 @@ class Moderation(BaseCog):
             else:
                 GearbotLogging.log_key(ctx.guild.id, "slowmode_log", user=Utils.escape_markdown(ctx.author), user_id=ctx.author.id, channel=channel.mention, channel_id=channel.id, duration=duration)
                 await MessageUtils.send_to(ctx, 'YES', "slowmode_set", duration=duration, channel=channel.mention)
-    
+
     @commands.command()
     @commands.guild_only()
     async def verification(self, ctx: commands.Context, level: VerificationLevel, *, reason: Reason = ""):
@@ -566,6 +579,7 @@ class Moderation(BaseCog):
     @commands.command()
     @commands.guild_only()
     @commands.bot_has_permissions(ban_members=True, add_reactions=True)
+    @require_cache()
     async def forceban(self, ctx: commands.Context, user: DiscordUser, *, reason: Reason = ""):
         """forceban_help"""
         if reason == "":
@@ -593,7 +607,7 @@ class Moderation(BaseCog):
         if user.discriminator == '0000':
             await MessageUtils.send_to(ctx, 'NO', 'forceban_unable_sytem_user')
             return
-        
+
         self.bot.data["forced_exits"].add(f"{ctx.guild.id}-{user.id}")
         await ctx.guild.ban(user, reason=Utils.trim_message(
             f"Moderator: {ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) Reason: {reason}", 500),
@@ -648,8 +662,9 @@ class Moderation(BaseCog):
         GearbotLogging.log_key(ctx.guild.id, 'unban_log', user=Utils.clean_user(member.user), user_id=member.user.id, moderator=Utils.clean_user(ctx.author), moderator_id=ctx.author.id, reason=reason, inf=i.id)
 
     @commands.command()
-    @bot_has_guild_permission(add_reactions=True)
+    @bot_has_guild_permission(manage_roles=True)
     @commands.bot_has_permissions(add_reactions=True)
+    @require_cache()
     async def mute(self, ctx: commands.Context, target: discord.Member, duration: Duration, *, reason: Reason = ""):
         """mute_help"""
         if duration.unit is None:
@@ -738,7 +753,7 @@ class Moderation(BaseCog):
                                                            reason=reason, inf_id=infraction.id, end=infraction.end)
                                     name = Utils.clean_user(target)
                                     if Configuration.get_var(ctx.guild.id, "INFRACTIONS", "DM_ON_MUTE"):
-                                        try: 
+                                        try:
                                             dur=f'{duration.length}{duration.unit}'
                                             await target.send(
                                                 f"{Emoji.get_chat_emoji('MUTE')} {Translator.translate('mute_duration_until_dm', ctx.guild.id, server=ctx.guild.name, duration=dur)}```{reason}```")
@@ -772,7 +787,7 @@ class Moderation(BaseCog):
                                     Questions.Option(Emoji.get_emoji("2"), Translator.translate("mute_option_until", ctx, duration=d), until),
                                     Questions.Option(Emoji.get_emoji("3"), Translator.translate("mute_option_overwrite", ctx, duration=d), overwrite)
                                 ])
-                                
+
                         else:
                             await MessageUtils.send_to(ctx, 'NO', 'mute_negative_denied', duration=f'{duration.length} {duration.unit}')
                     else:
@@ -936,7 +951,7 @@ class Moderation(BaseCog):
             await Archive.ship_messages(ctx, messages, "channel", Utils.escape_markdown(channel_name))
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
-    
+
     @archive.command()
     async def category(self, ctx, category: discord.CategoryChannel, amount=5000):
         """archive_category_help"""
@@ -975,6 +990,7 @@ class Moderation(BaseCog):
     @clean.command("user")
     @commands.guild_only()
     @commands.bot_has_permissions(manage_messages=True)
+    @require_cache()
     async def clean_user(self, ctx, users: Greedy[DiscordUser], amount: RangedInt(1) = 50):
         """clean_user_help"""
         if len(users) is 0:
@@ -1024,6 +1040,7 @@ class Moderation(BaseCog):
     @clean.command("everywhere")
     @commands.guild_only()
     @commands.bot_has_permissions(manage_messages=True)
+    @require_cache()
     async def clean_everywhere(self, ctx, users: Greedy[DiscordUser], amount: RangedInt(1) = 50):
         """clean_everywhere_help"""
         if len(users) is 0:

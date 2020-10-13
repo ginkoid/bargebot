@@ -1,5 +1,5 @@
 from discord.ext import commands
-from discord.ext.commands import NoPrivateMessage, BotMissingPermissions
+from discord.ext.commands import NoPrivateMessage, BotMissingPermissions, CheckFailure
 
 from Util import Configuration
 
@@ -51,6 +51,16 @@ def mod_only():
 def is_server(ctx, id):
     return ctx.guild is not None and ctx.guild.id == id
 
+class NotCachedException(CheckFailure):
+    pass
+
+
+def require_cache():
+    async def predicate(ctx):
+        if ctx.guild is not None and ctx.guild.id in ctx.bot.missing_guilds:
+            raise NotCachedException
+        return True
+    return commands.check(predicate)
 
 def check_permission(command_object, guild, member):
     if guild is None:
@@ -144,4 +154,3 @@ def bot_has_guild_permission(**kwargs):
         raise BotMissingPermissions(missing)
 
     return commands.check(predicate)
-

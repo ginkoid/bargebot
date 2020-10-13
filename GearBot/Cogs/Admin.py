@@ -1,13 +1,8 @@
-import contextlib
-import io
-import textwrap
-import traceback
-
 import discord
 from discord.ext import commands
 
 from Cogs.BaseCog import BaseCog
-from Util import GearbotLogging, Utils, Configuration, Pages, Emoji, MessageUtils, DocUtils
+from Util import GearbotLogging, Utils, Configuration, Pages, MessageUtils
 from Util.Converters import UserID, Guild, DiscordUser
 
 

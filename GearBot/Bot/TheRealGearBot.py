@@ -1,6 +1,4 @@
 import asyncio
-import json
-import os
 import signal
 import sys
 import time
@@ -10,12 +8,14 @@ from datetime import datetime
 import aiohttp
 import aioredis
 from aiohttp import ClientOSError, ServerDisconnectedError
-from discord import Activity, Embed, Colour, Message, TextChannel, Forbidden, ConnectionClosed
+from discord import Activity, Embed, Colour, Message, TextChannel, Forbidden, ConnectionClosed, Guild
 from discord.abc import PrivateChannel
 from discord.ext import commands
 
 from Util import Configuration, GearbotLogging, Emoji, Pages, Utils, Translator, InfractionUtils, MessageUtils, \
     server_info
+from Util.Permissioncheckers import NotCachedException
+from Util.Utils import to_pretty_time
 from database import DatabaseConnector
 
 
@@ -115,6 +115,23 @@ async def on_ready(bot):
     else:
         await bot.change_presence(activity=Activity(type=3, name='the gears turn'))
 
+    bot.missing_guilds = [g.id for g in bot.guilds]
+    GearbotLogging.info(f"Requesting member info for {len(bot.missing_guilds)} guilds")
+    start_time = time.time()
+    tasks = [cache_guild(bot, guild_id) for guild_id in bot.missing_guilds]
+    await asyncio.wait(tasks)
+    end = time.time()
+    pretty_time = to_pretty_time(end - start_time, None)
+    GearbotLogging.info(f"Finished fetching member info in {pretty_time}")
+    bot.initial_fill_complete=True
+
+
+async def cache_guild(bot, guild_id):
+    guild: Guild = bot.get_guild(guild_id)
+    await guild.chunk(cache=True)
+    bot.missing_guilds.remove(guild_id)
+
+
 async def on_message(bot, message:Message):
     if message.author.bot:
         if message.author.id == bot.user.id:
@@ -142,7 +159,7 @@ async def on_message(bot, message:Message):
             await bot.invoke(ctx)
 
 
-async def on_guild_join(guild):
+async def on_guild_join(bot, guild: Guild):
     blocked = Configuration.get_persistent_var("server_blocklist", [])
     if guild.id in blocked:
         GearbotLogging.info(f"Someone tried to add me to blocked guild {guild.name} ({guild.id})")
@@ -151,14 +168,17 @@ async def on_guild_join(guild):
         except Exception:
             pass
         await guild.leave()
-    elif guild.owner.id in Configuration.get_persistent_var("user_blocklist", []):
-        GearbotLogging.info(f"Someone tried to add me to {guild.name} ({guild.id}) but the owner ({guild.owner} ({guild.owner.id})) is blocked")
+    elif guild.owner_id in Configuration.get_persistent_var("user_blocklist", []):
+        GearbotLogging.info(f"Someone tried to add me to {guild.name} ({guild.id}) but the owner ({guild.owner} ({guild.owner_id})) is blocked")
         try:
-            await guild.owner.send(f"Someone tried adding me to {guild.name} (``{guild.id}``) but you have been blocked due to bot abuse, so i left")
+            await (await bot.fetch_user(guild.owner_id)).send(f"Someone tried adding me to {guild.name} (``{guild.id}``) but you have been blocked due to bot abuse, so i left")
         except Exception:
             pass
         await guild.leave()
     else:
+        bot.missing_guilds.append(guild.id)
+        await guild.chunk(cache=True)
+        bot.missing_guilds.remove(guild.id)
         GearbotLogging.info(f"A new guild came up: {guild.name} ({guild.id}).")
         Configuration.load_config(guild.id)
         name = await Utils.clean(guild.name)
@@ -167,15 +187,15 @@ async def on_guild_join(guild):
 async def on_guild_remove(guild):
     blocked = Configuration.get_persistent_var("server_blocklist", [])
     blocked_users = Configuration.get_persistent_var("user_blocklist", [])
-    if guild.id not in blocked and guild.owner.id not in blocked_users:
+    if guild.id not in blocked and guild.owner_id not in blocked_users:
         GearbotLogging.info(f"I was removed from a guild: {guild.name} ({guild.id}).")
         await GearbotLogging.bot_log(f"{Emoji.get_chat_emoji('LEAVE')} I was removed from a guild: {guild.name} ({guild.id}).", embed=server_info.server_info_embed(guild))
 
 
 async def on_guild_update(before, after):
-    if after.owner is not None and after.owner.id in Configuration.get_persistent_var("user_blocklist", []):
+    if after.owner is not None and after.owner_id in Configuration.get_persistent_var("user_blocklist", []):
         GearbotLogging.info(
-            f"Someone transferred {after.name} ({after.id}) to ({after.owner} ({after.owner.id})) but they are blocked")
+            f"Someone transferred {after.name} ({after.id}) to ({after.owner} ({after.owner_id})) but they are blocked")
         try:
             await after.owner.send(f"Someone transferred {after.name} (``{after.id}``) to you, but you have been blocked due to bot abuse, so i left")
         except Exception:
@@ -191,6 +211,11 @@ class PostParseError(commands.BadArgument):
 
 
 async def on_command_error(bot, ctx: commands.Context, error):
+    if isinstance(error, NotCachedException):
+        if bot.initial_fill_complete:
+            await ctx.send(f"{Emoji.get_chat_emoji('CLOCK')} GearBot only just joined this guild and is still receiving the initial member info for this guild, please try again in a few seconds")
+        else:
+            await ctx.send(f"{Emoji.get_chat_emoji('CLOCK')} GearBot is in the process of starting up and has not received the member info for this guild. Please try again in a few minutes.")
     if isinstance(error, commands.BotMissingPermissions):
         GearbotLogging.error(f"Encountered a permission error while executing {ctx.command}: {error}")
         await ctx.send(error)

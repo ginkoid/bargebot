@@ -12,7 +12,7 @@ from discord.raw_models import RawMessageDeleteEvent, RawMessageUpdateEvent
 from Cogs.BaseCog import BaseCog
 from Util import GearbotLogging, Configuration, Utils, Archive, Emoji, Translator, InfractionUtils, Features, \
     MessageUtils
-from database.DatabaseConnector import LoggedMessage, LoggedAttachment, Infraction
+from database.DatabaseConnector import LoggedMessage, Infraction
 
 
 class ModLog(BaseCog):
