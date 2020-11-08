@@ -3,16 +3,14 @@ from tortoise import fields, Tortoise
 
 from Util import Configuration
 
-
 class LoggedMessage(Model):
     messageid = fields.BigIntField(pk=True, generated=False)
     content = fields.CharField(max_length=2000, collation="utf8mb4_general_ci", null=True)
-    author = fields.BigIntField()
-    channel = fields.BigIntField()
-    server = fields.BigIntField()
+    author = fields.BigIntField(index=True)
+    channel = fields.BigIntField(index=True)
+    server = fields.BigIntField(index=True)
     type = fields.IntField(null=True)
     pinned = fields.BooleanField(default=False)
-
 
 class LoggedAttachment(Model):
     id = fields.BigIntField(pk=True, generated=False)
@@ -20,26 +18,22 @@ class LoggedAttachment(Model):
     isImage = fields.BooleanField()
     message = fields.ForeignKeyField("models.LoggedMessage", related_name='attachments', source_field='messageid')
 
-
 class CustomCommand(Model):
     id = fields.IntField(pk=True, generated=True)
-    serverid = fields.BigIntField()
+    serverid = fields.BigIntField(index=True)
     trigger = fields.CharField(max_length=20, collation="utf8mb4_general_ci")
     response = fields.CharField(max_length=2000, collation="utf8mb4_general_ci")
 
-
-
 class Infraction(Model):
     id = fields.IntField(pk=True, generated=True)
-    guild_id = fields.BigIntField()
-    user_id = fields.BigIntField()
-    mod_id = fields.BigIntField()
+    guild_id = fields.BigIntField(index=True)
+    user_id = fields.BigIntField(index=True)
+    mod_id = fields.BigIntField(index=True)
     type = fields.CharField(max_length=10, collation="utf8mb4_general_ci")
     reason = fields.CharField(max_length=2000, collation="utf8mb4_general_ci")
     start = fields.BigIntField()
     end = fields.BigIntField(null=True)
     active = fields.BooleanField(default=True)
-
 
 class Reminder(Model):
     id = fields.IntField(pk=True, generated=True)
@@ -53,14 +47,11 @@ class Reminder(Model):
     time = fields.BigIntField()
     status = fields.IntField()
 
-
-
 class Raid(Model):
     id = fields.IntField(pk=True, generated=True)
     guild_id = fields.BigIntField()
     start = fields.BigIntField()
     end = fields.BigIntField(null=True)
-
 
 class Raider(Model):
     id = fields.IntField(pk=True, generated=True)
@@ -68,13 +59,11 @@ class Raider(Model):
     user_id = fields.BigIntField()
     joined_at = fields.BigIntField()
 
-
 class RaidAction(Model):
     id = fields.IntField(pk=True, generated=True)
     raider = fields.ForeignKeyField("models.Raider", related_name="actions_taken", source_field="raider_id")
     action = fields.CharField(max_length=20)
     infraction = fields.ForeignKeyField("models.Infraction", related_name="RaiderAction", source_field="infraction_id", null=True)
-
 
 async def init():
     await Tortoise.init(
