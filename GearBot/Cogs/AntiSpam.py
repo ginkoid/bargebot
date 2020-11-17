@@ -3,7 +3,7 @@ import datetime
 import re
 
 import emoji
-from asyncio.base_futures import CancelledError
+from concurrent.futures import CancelledError
 
 import time
 from collections import deque
@@ -23,9 +23,6 @@ from Util import Configuration, InfractionUtils, GearbotLogging, Utils, Translat
 from Util.Matchers import MENTION_MATCHER, URL_MATCHER
 from Util.SpamBucket import SpamBucket
 from database.DatabaseConnector import Infraction
-
-
-
 
 class Violation:
 
