@@ -6,46 +6,46 @@ import discord
 from Util import Translator, Emoji, Utils, Configuration
 
 
-def server_info_embed(guild, request_guild=None):
+def server_info_embed(guild):
     guild_features = ", ".join(guild.features)
     if guild_features == "":
         guild_features = None
     guild_made = guild.created_at.strftime("%d-%m-%Y")
     embed = discord.Embed(color=guild.roles[-1].color, timestamp=datetime.utcfromtimestamp(time.time()))
     embed.set_thumbnail(url=guild.icon_url_as())
-    embed.add_field(name=Translator.translate('server_name', request_guild), value=guild.name, inline=True)
-    embed.add_field(name=Translator.translate('id', request_guild), value=guild.id, inline=True)
-    embed.add_field(name=Translator.translate('owner', request_guild), value=guild.owner, inline=True)
-    embed.add_field(name=Translator.translate('members', request_guild), value=guild.member_count, inline=True)
+    embed.add_field(name=Translator.translate('server_name', guild), value=guild.name, inline=True)
+    embed.add_field(name=Translator.translate('id', guild), value=guild.id, inline=True)
+    embed.add_field(name=Translator.translate('owner', guild), value=guild.owner, inline=True)
+    embed.add_field(name=Translator.translate('members', guild), value=guild.member_count, inline=True)
 
     embed.add_field(
-        name=Translator.translate('channels', request_guild),
-        value=f"{Emoji.get_chat_emoji('CATEGORY')} {Translator.translate('categories', request_guild)}: {str(len(guild.categories))}\n"
-              f"{Emoji.get_chat_emoji('CHANNEL')} {Translator.translate('text_channels', request_guild)}: {str(len(guild.text_channels))}\n"
-              f"{Emoji.get_chat_emoji('VOICE')} {Translator.translate('voice_channels', request_guild)}: {str(len(guild.voice_channels))}\n"
-              f"{Translator.translate('total_channel', request_guild)}: {str(len(guild.text_channels) + len(guild.voice_channels))}",
+        name=Translator.translate('channels', guild),
+        value=f"{Emoji.get_chat_emoji('CATEGORY')} {Translator.translate('categories', guild)}: {str(len(guild.categories))}\n"
+              f"{Emoji.get_chat_emoji('CHANNEL')} {Translator.translate('text_channels', guild)}: {str(len(guild.text_channels))}\n"
+              f"{Emoji.get_chat_emoji('VOICE')} {Translator.translate('voice_channels', guild)}: {str(len(guild.voice_channels))}\n"
+              f"{Translator.translate('total_channel', guild)}: {str(len(guild.text_channels) + len(guild.voice_channels))}",
         inline=True
     )
     embed.add_field(
-        name=Translator.translate('created_at', request_guild),
+        name=Translator.translate('created_at', guild),
         value=f"{guild_made} ({(datetime.fromtimestamp(time.time()) - guild.created_at).days} days ago)",
         inline=True
     )
     embed.add_field(
-        name=Translator.translate('vip_features', request_guild),
+        name=Translator.translate('vip_features', guild),
         value=guild_features,
         inline=True
     )
     if guild.icon_url_as() != "":
         embed.add_field(
-            name=Translator.translate('server_icon', request_guild),
-            value=f"[{Translator.translate('server_icon', request_guild)}]({guild.icon_url_as()})",
+            name=Translator.translate('server_icon', guild),
+            value=f"[{Translator.translate('server_icon', guild)}]({guild.icon_url_as()})",
             inline=True
         )
 
-    roles = " ".join(role.name if role.is_default() else f"<@&{role.id}>" for role in guild.roles)
+    roles = ", ".join(role.name for role in guild.roles)
     embed.add_field(
-        name=Translator.translate('all_roles', request_guild),
+        name=Translator.translate('all_roles', guild),
         value=roles if len(roles) < 1024 else f"{len(guild.roles)} roles",
         inline=True
     )
@@ -53,7 +53,7 @@ def server_info_embed(guild, request_guild=None):
     if guild.emojis:
         emoji = "".join(str(e) for e in guild.emojis)
         embed.add_field(
-            name=Translator.translate('emoji', request_guild),
+            name=Translator.translate('emoji', guild),
             value=emoji if len(emoji) < 1024 else f"{len(guild.emojis)} emoji"
         )
 
