@@ -5,17 +5,13 @@ import discord
 
 from Util import Utils, GearbotLogging, Translator, Emoji
 
-archive_counter = 0
-
 async def archive_purge(bot, guild_id, messages):
-    global archive_counter
-    archive_counter += 1
     channel = bot.get_channel(list(messages.values())[0].channel)
     out = f"purged at {datetime.datetime.now()} from {channel.name}\n"
     out += await pack_messages(messages.values())
     buffer = io.BytesIO()
     buffer.write(out.encode())
-    GearbotLogging.log_key(guild_id, 'purged_log', count=len(messages), channel=channel.mention, file=(buffer, "Purged messages archive.txt"))
+    GearbotLogging.log_key(guild_id, 'purged_log', count=len(messages), channel=channel.mention, file=(buffer, "purged_messages_archive.txt"))
 
 async def pack_messages(messages):
     out = ""
@@ -24,10 +20,8 @@ async def pack_messages(messages):
         out += f"{discord.Object(message.messageid).created_at} {message.server} - {message.channel} - {message.messageid} | {name} ({message.author}) | {message.content} | {(', '.join(Utils.assemble_attachment(message.channel, attachment.id, attachment.name) for attachment in message.attachments))}\r\n"
     return out
 
-async def ship_messages(ctx, messages, t, user_or_channel):
+async def ship_messages(ctx, messages, response_content):
     if len(messages) > 0:
-        global archive_counter
-        archive_counter += 1
         message_list = dict()
         for message in messages:
             message_list[message.messageid] = message
@@ -39,6 +33,6 @@ async def ship_messages(ctx, messages, t, user_or_channel):
         buffer.write(out.encode())
         buffer.seek(0)
         file = discord.File(fp=buffer, filename="message_archive.txt")
-        await ctx.send(f"{Emoji.get_chat_emoji('YES')} {Translator.translate('archived_count', ctx, count=len(messages), user_or_channel=user_or_channel)}", file=file)
+        await ctx.send(f"{Emoji.get_chat_emoji('YES')} {response_content}", file=file)
     else:
-        await ctx.send(f"{Emoji.get_chat_emoji('WARNING')} {Translator.translate(f'archive_empty', ctx, user_or_channel=user_or_channel)}")
+        await ctx.send(f"{Emoji.get_chat_emoji('WARNING')} {response_content}")

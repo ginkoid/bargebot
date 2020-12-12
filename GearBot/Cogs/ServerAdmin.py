@@ -421,30 +421,6 @@ class ServerAdmin(BaseCog):
         Configuration.set_var(ctx.guild.id, "GENERAL", "PERM_DENIED_MESSAGE", value)
         await ctx.send(f"{Emoji.get_chat_emoji('YES')} {Translator.translate('configure_perm_msg_' + ('enabled' if value else 'disabled'), ctx.guild.id)}")
 
-
-    @configure.command()
-    async def language(self, ctx, lang_code:str = None):
-        """language_help"""
-        if lang_code is None:
-            await ctx.send(f"See https://crowdin.com/project/gearbot for all available languages and their translation statuses")
-        else:
-            code = None
-            lang_code = lang_code.lower().replace("_", "-")
-            for name, lcode in Translator.LANG_CODES.items():
-                if lang_code == lcode.lower() or lang_code == name.lower():
-                    code = lcode
-                    break
-            if code is None:
-                for name, lcode in Translator.LANG_CODES.items():
-                    if lang_code == lcode.lower()[:2]:
-                        code = lcode
-                        break
-            if code is not None:
-                Configuration.set_var(ctx.guild.id, "GENERAL", "LANG", code)
-                await ctx.send(f"{Emoji.get_chat_emoji('YES')} {Translator.translate('lang_changed', ctx.guild.id, lang=code, lang_name=Translator.LANG_NAMES[code])}")
-            else:
-                await ctx.send(f"{Emoji.get_chat_emoji('MUTE')} {Translator.translate('lang_unknown', ctx.guild.id)}")
-
     @configure.group()
     async def lvl4(self, ctx):
         """lvl4_help"""

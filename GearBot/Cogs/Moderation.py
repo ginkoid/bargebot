@@ -944,9 +944,9 @@ class Moderation(BaseCog):
             channel_id = channel.id
             channel_name = channel.name
         if Configuration.get_var(ctx.guild.id, "MESSAGE_LOGS", "ENABLED"):
-            await MessageUtils.send_to(ctx, 'SEARCH', 'searching_archives')
-            messages = await LoggedMessage.filter(server=ctx.guild.id, channel=channel_id).order_by("-messageid").limit(amount).prefetch_related("attachments")
-            await Archive.ship_messages(ctx, messages, "channel", Utils.escape_markdown(channel_name))
+            async with ctx.typing():
+                messages = await LoggedMessage.filter(server=ctx.guild.id, channel=channel_id).order_by("-messageid").limit(amount).prefetch_related("attachments")
+                await Archive.ship_messages(ctx, messages, Translator.translate(f'archived_channel_count', ctx, count=len(messages), channel=Utils.escape_markdown(channel_name)))
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
 
@@ -957,10 +957,10 @@ class Moderation(BaseCog):
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_too_much', ctx)}")
             return
         if Configuration.get_var(ctx.guild.id, "MESSAGE_LOGS", "ENABLED"):
-            await MessageUtils.send_to(ctx, 'SEARCH', 'searching_archives')
             for channel in category.text_channels:
-                messages = await LoggedMessage.filter(server=ctx.guild.id, channel=channel.id).order_by("-messageid").limit(amount).prefetch_related("attachments")
-                await Archive.ship_messages(ctx, messages, "channel", Utils.escape_markdown(channel.name))
+                async with ctx.typing():
+                    messages = await LoggedMessage.filter(server=ctx.guild.id, channel=channel.id).order_by("-messageid").limit(amount).prefetch_related("attachments")
+                    await Archive.ship_messages(ctx, messages, Translator.translate(f'archived_category_count', ctx, count=len(messages), channel=Utils.escape_markdown(channel.name), category=Utils.escape_markdown(category.name)))
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
 
@@ -971,9 +971,9 @@ class Moderation(BaseCog):
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_too_much', ctx)}")
             return
         if Configuration.get_var(ctx.guild.id, "MESSAGE_LOGS", "ENABLED"):
-            await MessageUtils.send_to(ctx, 'SEARCH', 'searching_archives')
-            messages = await LoggedMessage.filter(server=ctx.guild.id, author=user).order_by("-messageid").limit(amount).prefetch_related("attachments")
-            await Archive.ship_messages(ctx, messages, "user", await Utils.username(user))
+            async with ctx.typing():
+                messages = await LoggedMessage.filter(server=ctx.guild.id, author=user).order_by("-messageid").limit(amount).prefetch_related("attachments")
+                await Archive.ship_messages(ctx, messages, Translator.translate(f'archived_user_count', ctx, count=len(messages), user=await Utils.username(user)))
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
 
