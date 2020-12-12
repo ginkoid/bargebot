@@ -313,6 +313,9 @@ class DurationHolder:
         length = self.length
         if len(unit) > 1 and unit[-1:] == 's':  # plural -> singular
             unit = unit[:-1]
+        if unit == 'mo' or unit == 'month':
+            length = length * 30
+            unit = 'd'
         if unit == 'w' or unit == 'week':
             length = length * 7
             unit = 'd'
@@ -356,9 +359,9 @@ class DurationIdentifier(Converter):
     async def convert(self, ctx, argument):
         if argument is None:
             argument = "seconds"
-        if argument.lower() not in ["week", "weeks", "day", "days", "hour", "hours", "minute", "minutes", "second",
-                                    "seconds", "w", "d", "h", "m", "s"]:
-            raise BadArgument("Invalid duration, valid identifiers: week(s), day(s), hour(s), minute(s), second(s)")
+        if argument.lower() not in ["month", "months", "week", "weeks", "day", "days", "hour", "hours", "minute", "minutes", "second",
+                                    "seconds", "mo", "w", "d", "h", "m", "s"]:
+            raise BadArgument("Invalid duration, valid identifiers: month(s), week(s), day(s), hour(s), minute(s), second(s)")
         return argument
 
 
