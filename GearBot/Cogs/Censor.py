@@ -48,7 +48,7 @@ class Censor(BaseCog):
                 else:
                     author_id = message.author.id
 
-        member = channel.guild.get_member(author_id)
+        member = await Utils.get_member(self.bot, channel.guild, author_id)
         if member is not None and author_id != self.bot.user.id:
             await self.check_message(member, event.data["content"], channel, event.message_id)
 
@@ -137,7 +137,7 @@ class Censor(BaseCog):
         else:
 
             clean_message = await Utils.clean(content, channel.guild, markdown=False)
-            GearbotLogging.log_key(channel.guild.id, f'censor_message_failed{key}', user=member,
+            GearbotLogging.log_key(channel.guild.id, f'censored_message_failed{key}', user=member,
                                    user_id=member.id, message=clean_message, sequence=bad,
                                    link='https://discord.com/channels/{0}/{1}/{2}'.format(channel.guild.id, channel.id, message_id))
 

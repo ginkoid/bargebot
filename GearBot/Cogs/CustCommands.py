@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from Cogs.BaseCog import BaseCog
-from Util import Configuration, Confirmation, Emoji, Translator, MessageUtils, Utils, Permissioncheckers
+from Util import Configuration, Confirmation, Emoji, Translator, MessageUtils, Utils, Permissioncheckers, Pages
 from database.DatabaseConnector import CustomCommand
 
 
@@ -14,6 +14,7 @@ class CustCommands(BaseCog):
         self.commands = dict()
         self.bot.loop.create_task(self.reloadCommands())
         self.loaded = False
+        Pages.register("custom_command_list", self.command_list_init, self.command_list_update)
 
 
     async def reloadCommands(self):
@@ -34,22 +35,44 @@ class CustCommands(BaseCog):
 
     @commands.group(name="commands", aliases=['command'])
     @commands.guild_only()
-    @commands.bot_has_permissions(embed_links=True)
+    @commands.bot_has_permissions(embed_links=True, external_emojis=True, add_reactions=True)
     async def command(self, ctx:commands.Context):
         """custom_commands_help"""
         if ctx.invoked_subcommand is None:
-            embed = discord.Embed(timestamp=ctx.message.created_at, color=0x663399, title=Translator.translate("custom_command_list", ctx.guild.id, server_name=ctx.guild.name))
-            value = ""
             if ctx.guild.id in self.commands:
-                for trigger in self.commands[ctx.guild.id].keys():
-                    if len(value) + len(trigger) > 1000:
-                        embed.add_field(name="\u200b", value=value)
-                        value = ""
-                    value = f"{value}{trigger}\n"
-                embed.add_field(name="\u200b", value=value)
-                await ctx.send(embed=embed)
+                await Pages.create_new(self.bot, "custom_command_list", ctx)
             else:
                 await ctx.send(Translator.translate("custom_command_no_commands", ctx.guild.id))
+
+
+    def get_command_pages(self, guild_id):
+        pages = []
+        page = ""
+        for trigger in self.commands[guild_id].keys():
+            if len(page) + len(trigger) > 400:
+                pages.append(page)
+                page = ""
+            page += f"\n{trigger}"
+        if len(page) > 0:
+            pages.append(page)
+        return pages
+
+
+    async def command_list_init(self, ctx):
+        pages = self.get_command_pages(ctx.guild.id)
+        return None, self.gen_command_page(pages, 0, ctx.guild), len(pages) > 1
+
+    async def command_list_update(self, ctx, message, page_num, action, data):
+        pages = self.get_command_pages(message.guild.id)
+        page, page_num = Pages.basic_pages(pages, page_num, action)
+        data["page"] = page_num
+        return None, self.gen_command_page(pages, page_num, message.guild), data
+
+    def gen_command_page(self, pages, page_num, guild):
+        return Embed(description=pages[page_num], title=f"{Translator.translate('custom_command_list', guild.id,server_name=guild.name)} ({page_num+1}/{len(pages)})", color=0x663399)
+
+
+
 
     @command.command(aliases=["new", "add"])
     @commands.guild_only()
@@ -115,13 +138,16 @@ class CustCommands(BaseCog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if message.author.bot:
+        if message.author.bot or message.webhook_id is not None:
             return
         if not hasattr(message.channel, "guild") or message.channel.guild is None:
             return
 
-        member = message.channel.guild.get_member(message.author.id)
-        if member is None:
+        me = message.guild.me
+        if me is None:
+            message.guild.fetch_member(self.bot.user.id)
+        permissions = message.channel.permissions_for(me)
+        if not (permissions.read_messages and permissions.send_messages and permissions.embed_links):
             return
 
         role_list = Configuration.get_var(message.guild.id, "CUSTOM_COMMANDS", "ROLES")
@@ -130,18 +156,19 @@ class CustCommands(BaseCog):
         channels_ignored = Configuration.get_var(message.guild.id, "CUSTOM_COMMANDS", "CHANNELS_IGNORED")
         mod_bypass = Configuration.get_var(message.guild.id, "CUSTOM_COMMANDS", "MOD_BYPASS")
 
-        is_mod = Permissioncheckers.is_mod(member)
+        is_mod = message.author is not None and Permissioncheckers.is_mod(message.author)
 
         if (message.channel.id in channel_list) is channels_ignored and not (is_mod and mod_bypass):
             return
 
         has_role = False
-        for role in member.roles:
-            if role.id in role_list:
-                has_role = True
-                break
+        if message.author is not None and hasattr(message.author, "roles"):
+            for role in message.author.roles:
+                if role.id in role_list:
+                    has_role = True
+                    break
 
-        if has_role is not role_required:
+        if has_role is not role_required and not (is_mod and mod_bypass):
             return
 
         prefix = Configuration.get_var(message.guild.id, "GENERAL", "PREFIX")
@@ -151,10 +178,6 @@ class CustCommands(BaseCog):
                     command_content = self.commands[message.guild.id][trigger].replace("@", "@\u200b")
                     await message.channel.send(command_content)
                     self.bot.custom_command_count += 1
-
-
-
-
 
 def setup(bot):
     bot.add_cog(CustCommands(bot))

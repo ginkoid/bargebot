@@ -9,7 +9,7 @@ from subprocess import Popen
 
 import discord
 import math
-from discord import NotFound
+from discord import NotFound, DiscordException
 
 from Util import GearbotLogging, Translator
 from Util.Matchers import ROLE_ID_MATCHER, CHANNEL_ID_MATCHER, ID_MATCHER, EMOJI_MATCHER, URL_MATCHER
@@ -205,7 +205,7 @@ async def get_user(uid, fetch=True):
 def clean_user(user):
     if user is None:
         return "UNKNOWN USER"
-    return f"{escape_markdown(user.name)}#{user.discriminator}"
+    return f"{escape_markdown(replace_lookalikes(user.name))}#{user.discriminator}"
 
 def username_from_user(user):
     if user is None:
@@ -271,3 +271,13 @@ def to_pretty_time(seconds, guild_id):
 
 def assemble_attachment(channel, aid, name):
     return f"https://media.discordapp.net/attachments/{channel}/{aid}/{name}"
+
+
+async def get_member(bot, guild, user_id):
+    member = guild.get_member(user_id)
+    if member is None and guild.id in bot.missing_guilds:
+        try:
+            member = await guild.fetch_member(user_id)
+        except DiscordException:
+            return None
+    return member

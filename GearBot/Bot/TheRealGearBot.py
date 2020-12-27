@@ -1,5 +1,8 @@
 import asyncio
+import concurrent
 import signal
+from concurrent.futures._base import CancelledError
+
 import sys
 import time
 import traceback
@@ -16,7 +19,7 @@ from Util import Configuration, GearbotLogging, Emoji, Pages, Utils, Translator,
     server_info
 from Util.Permissioncheckers import NotCachedException
 from Util.Utils import to_pretty_time
-from database import DatabaseConnector
+from database import DatabaseConnector, DBUtils
 
 
 def prefix_callable(bot, message):
@@ -82,55 +85,100 @@ async def initialize(bot, startup=False):
 
 
 async def on_ready(bot):
-    if not bot.STARTUP_COMPLETE:
-        await initialize(bot, True)
-        #shutdown handler for clean exit on linux
-        try:
-            for signame in ('SIGINT', 'SIGTERM'):
-                asyncio.get_event_loop().add_signal_handler(getattr(signal, signame),
-                                        lambda: asyncio.ensure_future(Utils.cleanExit(bot, signame)))
-        except Exception:
-            pass #doesn't work on windows
-
-        bot.start_time = datetime.utcnow()
-        GearbotLogging.info("Loading cogs...")
-        for extension in Configuration.get_master_var("COGS"):
+    try:
+        if not bot.STARTUP_COMPLETE:
+            await initialize(bot, True)
+            #shutdown handler for clean exit on linux
             try:
-                bot.load_extension("Cogs." + extension)
+                for signame in ('SIGINT', 'SIGTERM'):
+                    asyncio.get_event_loop().add_signal_handler(getattr(signal, signame),
+                                            lambda: asyncio.ensure_future(Utils.cleanExit(bot, signame)))
             except Exception as e:
-                await handle_exception(f"Failed to load cog {extension}", bot, e)
-        GearbotLogging.info("Cogs loaded")
+                pass #doesn't work on windows
 
-        to_unload = Configuration.get_master_var("DISABLED_COMMANDS", [])
-        for c in to_unload:
-            bot.remove_command(c)
 
-        bot.STARTUP_COMPLETE = True
-        info = await bot.application_info()
-        gears = [Emoji.get_chat_emoji(e) for e in ["WOOD", "STONE", "IRON", "GOLD", "DIAMOND"]]
-        a = " ".join(gears)
-        b = " ".join(reversed(gears))
-        await GearbotLogging.bot_log(message=f"{a} All gears turning at full speed, {info.name} ready to go! {b}")
-        await bot.change_presence(activity=Activity(type=3, name='the gears turn'))
-    else:
-        await bot.change_presence(activity=Activity(type=3, name='the gears turn'))
+            bot.start_time = datetime.utcnow()
+            GearbotLogging.info("Loading cogs...")
+            for extension in Configuration.get_master_var("COGS"):
+                try:
+                    bot.load_extension("Cogs." + extension)
+                except Exception as e:
+                    await handle_exception(f"Failed to load cog {extension}", bot, e)
+            GearbotLogging.info("Cogs loaded")
 
-    bot.missing_guilds = [g.id for g in bot.guilds]
-    GearbotLogging.info(f"Requesting member info for {len(bot.missing_guilds)} guilds")
-    start_time = time.time()
-    tasks = [cache_guild(bot, guild_id) for guild_id in bot.missing_guilds]
-    await asyncio.wait(tasks)
-    end = time.time()
-    pretty_time = to_pretty_time(end - start_time, None)
-    GearbotLogging.info(f"Finished fetching member info in {pretty_time}")
-    bot.initial_fill_complete=True
+            to_unload = Configuration.get_master_var("DISABLED_COMMANDS", [])
+            for c in to_unload:
+                bot.remove_command(c)
 
+            bot.STARTUP_COMPLETE = True
+            info = await bot.application_info()
+            gears = [Emoji.get_chat_emoji(e) for e in ["WOOD", "STONE", "IRON", "GOLD", "DIAMOND"]]
+            a = " ".join(gears)
+            b = " ".join(reversed(gears))
+            await GearbotLogging.bot_log(message=f"{a} All gears turning at full speed, {info.name} ready to go! {b}")
+            await bot.change_presence(activity=Activity(type=3, name='the gears turn'))
+        else:
+            await bot.change_presence(activity=Activity(type=3, name='the gears turn'))
+
+        bot.missing_guilds = []
+        bot.missing_guilds = {g.id for g in bot.guilds}
+        if bot.loading_task is not None:
+            bot.loading_task.cancel()
+        bot.loading_task = asyncio.create_task(fill_cache(bot))
+
+        asyncio.create_task(message_flusher())
+
+    except Exception as e:
+        await handle_exception("Ready event failure", bot, e)
+
+
+async def fill_cache(bot):
+    try:
+        while len(bot.missing_guilds) > 0:
+            await GearbotLogging.bot_log(f"{Emoji.get_chat_emoji('CLOCK')} Requesting member info for {len(bot.missing_guilds)} guilds")
+            start_time = time.time()
+            old = len(bot.missing_guilds)
+            while len(bot.missing_guilds) > 0:
+                try:
+                    tasks = [asyncio.create_task(cache_guild(bot, guild_id)) for guild_id in bot.missing_guilds]
+                    await asyncio.wait_for(asyncio.gather(*tasks), 600)
+                except (CancelledError, concurrent.futures._base.CancelledError):
+                    pass
+                except concurrent.futures._base.TimeoutError:
+                    if old == len(bot.missing_guilds):
+                        await GearbotLogging.bot_log(f"{Emoji.get_chat_emoji('NO')} Timed out fetching member chunks canceling all pending fetches to try again!")
+                        for task in tasks:
+                            task.cancel()
+                        await asyncio.sleep(1)
+                        continue
+                except Exception as e:
+                    await handle_exception("Fetching member info", bot, e)
+                else:
+                    if old == len(bot.missing_guilds):
+                        await GearbotLogging.bot_log(f"{Emoji.get_chat_emoji('NO')} Timed out fetching member chunks canceling all pending fetches to try again!")
+                        for task in tasks:
+                            task.cancel()
+                        continue
+            end = time.time()
+            pretty_time = to_pretty_time(end - start_time, None)
+            await GearbotLogging.bot_log(f"{Emoji.get_chat_emoji('YES')} Finished fetching member info in {pretty_time}")
+            bot.initial_fill_complete=True
+    except Exception as e:
+        await handle_exception("Guild fetching failed", bot, e)
+    finally:
+        bot.loading_task = None
 
 async def cache_guild(bot, guild_id):
-    guild: Guild = bot.get_guild(guild_id)
+    guild = bot.get_guild(guild_id)
     await guild.chunk(cache=True)
-    bot.missing_guilds.remove(guild_id)
+    if guild_id in bot.missing_guilds:
+        bot.missing_guilds.remove(guild_id)
 
+
+async def message_flusher():
+    while True:
+        await asyncio.sleep(60)
+        await DBUtils.flush()
 
 async def on_message(bot, message:Message):
     if message.author.bot:
@@ -176,7 +224,7 @@ async def on_guild_join(bot, guild: Guild):
             pass
         await guild.leave()
     else:
-        bot.missing_guilds.append(guild.id)
+        bot.missing_guilds.add(guild.id)
         await guild.chunk(cache=True)
         bot.missing_guilds.remove(guild.id)
         GearbotLogging.info(f"A new guild came up: {guild.name} ({guild.id}).")
@@ -212,10 +260,13 @@ class PostParseError(commands.BadArgument):
 
 async def on_command_error(bot, ctx: commands.Context, error):
     if isinstance(error, NotCachedException):
-        if bot.initial_fill_complete:
-            await ctx.send(f"{Emoji.get_chat_emoji('CLOCK')} GearBot only just joined this guild and is still receiving the initial member info for this guild, please try again in a few seconds")
+        if bot.loading_task is not None:
+            if bot.initial_fill_complete:
+                await ctx.send(f"{Emoji.get_chat_emoji('CLOCK')} Due to a earlier connection failure the cached data for this guild is no longer up to date and is being rebuild. Please try again in a few minutes.")
+            else:
+                await ctx.send(f"{Emoji.get_chat_emoji('CLOCK')} GearBot is in the process of starting up and has not received the member info for this guild. Please try again in a few minutes.")
         else:
-            await ctx.send(f"{Emoji.get_chat_emoji('CLOCK')} GearBot is in the process of starting up and has not received the member info for this guild. Please try again in a few minutes.")
+            await ctx.send(f"{Emoji.get_chat_emoji('CLOCK')} GearBot only just joined this guild and is still receiving the initial member info for this guild, please try again in a few seconds")
     if isinstance(error, commands.BotMissingPermissions):
         GearbotLogging.error(f"Encountered a permission error while executing {ctx.command}: {error}")
         await ctx.send(error)

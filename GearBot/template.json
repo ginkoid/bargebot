@@ -1,12 +1,12 @@
 {
-  "VERSION": 29,
+  "VERSION": 30,
   "GENERAL": {
     "LANG": "en_US",
     "PERM_DENIED_MESSAGE": true,
     "PREFIX": "!",
     "TIMESTAMPS": true,
     "NEW_USER_THRESHOLD": 86400,
-    "TIMEZONE": "America/New_York"
+    "TIMEZONE": "UTC"
   },
   "ROLES": {
     "SELF_ROLES": [],
@@ -71,5 +71,9 @@
     "CHANNELS": [],
     "CHANNELS_IGNORED": true,
     "MOD_BYPASS": true
+  },
+  "FLAGGING": {
+    "WORD_LIST": [],
+    "TOKEN_LIST": []
   }
 }

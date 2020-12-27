@@ -323,7 +323,7 @@ def v25(config):
     if "ROLE_LIST_MODE" in config["CENSORING"].keys():
         config["ROLES"]["ROLE_LIST_MODE"] = config["CENSORING"]["ROLE_LIST_MODE"]
         del config["CENSORING"]["ROLE_LIST_MODE"]
-        
+
 def v26(config):
     config["INFRACTIONS"]["DM_ON_UNMUTE"] = False
     config["INFRACTIONS"]["DM_ON_MUTE"] = False
@@ -345,10 +345,17 @@ def v28(config):
         "MOD_BYPASS": True
     }
 
+def v29(config):
+    add_logging(config, "MESSAGE_FLAGS")
+    config["FLAGGING"] = {
+        "WORD_LIST": [],
+        "TOKEN_LIST": []
+    }
+
 def add_logging(config, *args):
     for cid, info in config["LOG_CHANNELS"].items():
-        if "FUTURE_LOGS" in info:
-            info.extend(args)
+        if "FUTURE_LOGS" in info["CATEGORIES"]:
+            info["CATEGORIES"].extend(args)
 
 
 def nuke_keys(config, *keys):
@@ -366,10 +373,9 @@ def move_keys(config, section, *keys):
             del config[key]
 
 # migrators for the configs, do NOT increase the version here, this is done by the migration loop
-MIGRATORS = [initial_migration, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v25, v26, v27, v28]
+MIGRATORS = [initial_migration, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v25, v26, v27, v28, v29]
 
 BOT = None
-
 
 async def initialize(bot: commands.Bot):
     global CONFIG_VERSION, BOT, TEMPLATE
@@ -387,17 +393,18 @@ async def initialize(bot: commands.Bot):
 def load_config(guild):
     global SERVER_CONFIGS
     config = Utils.fetch_from_disk(f'config/{guild}')
-    if "VERSION" not in config and len(config) < 15:
+    if len(config.keys()) != 0 and "VERSION" not in config and len(config) < 15:
         GearbotLogging.info(f"The config for {guild} is to old to migrate, resetting")
         config = dict()
-    else:
+    elif len(config.keys()) != 0:
         if "VERSION" not in config:
             config["VERSION"] = 0
         SERVER_CONFIGS[guild] = update_config(guild, config)
-    if len(config) is 0:
+    if len(config.keys()) is 0:
         GearbotLogging.info(f"No config available for {guild}, creating a blank one.")
         SERVER_CONFIGS[guild] = Utils.fetch_from_disk("GearBot/template")
         save(guild)
+    validate_config(guild)
     Features.check_server(guild)
 
 
@@ -406,8 +413,11 @@ def validate_config(guild_id):
     # no guild means we're not there anymore, ignore it
     if guild is None:
         return
+    changed = False
     for key in ["ADMIN_ROLES", "MOD_ROLES", "TRUSTED_ROLES"]:
-        checklist(guild.id, key, guild.get_role)
+        changed |= checklist(guild.id, key, guild.get_role)
+    if changed:
+        save(guild_id)
 
 
 def checklist(guid, key, getter):
@@ -420,8 +430,7 @@ def checklist(guid, key, getter):
             changed = True
     for r in tr:
         cl.remove(r)
-    if changed:
-        save(guid)
+    return changed
 
 
 def update_config(guild, config):

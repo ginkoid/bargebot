@@ -47,7 +47,7 @@ def server_info_embed(guild):
     embed.add_field(
         name=Translator.translate('all_roles', guild),
         value=roles if len(roles) < 1024 else f"{len(guild.roles)} roles",
-        inline=True
+        inline=False
     )
 
     if guild.emojis:

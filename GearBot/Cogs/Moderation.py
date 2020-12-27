@@ -1,24 +1,27 @@
 import asyncio
 import datetime
+import re
 import time
 import typing
+import fnmatch
 from typing import Optional, Union
 
 import discord
-from discord import Object, Emoji, Forbidden, NotFound
+from discord import Object, Emoji, Forbidden, NotFound, ActivityType, DMChannel, DiscordException
 from discord.ext import commands
 from discord.ext.commands import BadArgument, Greedy, MemberConverter, RoleConverter, MissingPermissions
+from tortoise.exceptions import MultipleObjectsReturned
 
 from Bot import TheRealGearBot
 from Cogs.BaseCog import BaseCog
 from Util import Configuration, Utils, GearbotLogging, Pages, InfractionUtils, Emoji, Translator, \
-    Archive, Confirmation, MessageUtils, Questions, server_info, Actions
+    Archive, Confirmation, MessageUtils, Questions, server_info, Actions, Permissioncheckers
 from Util.Actions import ActionFailed
 from Util.Converters import BannedMember, UserID, Reason, Duration, DiscordUser, PotentialID, RoleMode, Guild, \
     RangedInt, Message, RangedIntBan, VerificationLevel, Nickname
-from Util.Permissioncheckers import bot_has_guild_permission, require_cache
+from Util.Permissioncheckers import bot_has_guild_permission
+from database import DBUtils
 from database.DatabaseConnector import LoggedMessage, Infraction
-
 
 class Moderation(BaseCog):
 
@@ -30,6 +33,8 @@ class Moderation(BaseCog):
         self.bot.loop.create_task(self.timed_actions())
         Pages.register("roles", self.roles_init, self.roles_update)
         Pages.register("mass_failures", self._mass_failures_init, self._mass_failures_update)
+
+        self.regexes = dict()
 
     def cog_unload(self):
         self.running = False
@@ -64,6 +69,7 @@ class Moderation(BaseCog):
 
     @commands.command()
     @commands.guild_only()
+    @commands.bot_has_permissions(external_emojis=True, add_reactions=True)
     async def roles(self, ctx: commands.Context, mode: RoleMode = "hierarchy"):
         """roles_help"""
         data = {"mode": mode} if mode != "hierarchy" else {}
@@ -73,7 +79,7 @@ class Moderation(BaseCog):
     @commands.guild_only()
     async def seen(self, ctx, user: discord.Member):
         """seen_help"""
-        messages = await LoggedMessage.filter(author=user.id).order_by("-messageid").limit(1).prefetch_related("attachments")
+        messages = await LoggedMessage.filter(author=user.id, server=ctx.guild.id).order_by("-messageid").limit(1).prefetch_related("attachments")
         if len(messages) is 0:
             await MessageUtils.send_to(ctx, "SPY", "seen_fail", user_id=user.id, user=Utils.clean_user(user))
         else:
@@ -82,7 +88,6 @@ class Moderation(BaseCog):
     @commands.group(aliases=["nick"])
     @commands.guild_only()
     @commands.bot_has_permissions(manage_nicknames=True)
-    @require_cache()
     async def nickname(self, ctx: commands.Context):
         """mod_nickname_help"""
         if ctx.subcommand_passed is None:
@@ -90,7 +95,6 @@ class Moderation(BaseCog):
 
     @nickname.command("add", aliases=["set", "update", "edit"])
     @commands.bot_has_permissions(manage_nicknames=True)
-    @require_cache()
     async def nickname_add(self, ctx, user: discord.Member, *, nick:Nickname):
         """mod_nickname_add_help"""
         try:
@@ -118,7 +122,6 @@ class Moderation(BaseCog):
 
     @nickname.command("remove", aliases=["clear", "nuke", "reset"])
     @commands.bot_has_permissions(manage_nicknames=True)
-    @require_cache()
     async def nickname_remove(self, ctx, user: discord.Member):
         """mod_nickname_remove_help"""
         if user.nick is None:
@@ -151,7 +154,6 @@ class Moderation(BaseCog):
     @commands.group()
     @commands.guild_only()
     @commands.bot_has_permissions(manage_roles=True)
-    @require_cache()
     async def role(self, ctx: commands.Context):
         """mod_role_help"""
         if ctx.subcommand_passed is None:
@@ -190,14 +192,12 @@ class Moderation(BaseCog):
 
     @role.command()
     @commands.bot_has_permissions(manage_roles=True)
-    @require_cache()
     async def add(self, ctx, user: discord.Member, *, role: str):
         """role_add_help"""
         await self.role_handler(ctx, user, role, "add")
 
     @role.command(aliases=["rmv"])
     @commands.bot_has_permissions(manage_roles=True)
-    @require_cache()
     async def remove(self, ctx, user: discord.Member, *, role: str):
         """role_remove_help"""
         await self.role_handler(ctx, user, role, "remove")
@@ -205,7 +205,6 @@ class Moderation(BaseCog):
     @commands.command(aliases=["👢"])
     @commands.guild_only()
     @commands.bot_has_permissions(kick_members=True)
-    @require_cache()
     async def kick(self, ctx, user: discord.Member, *, reason: Reason = ""):
         """kick_help"""
         if reason == "":
@@ -239,7 +238,7 @@ class Moderation(BaseCog):
 
     @commands.guild_only()
     @commands.command("mkick", aliases=["👢👢"])
-    @commands.bot_has_permissions(kick_members=True, add_reactions=True)
+    @commands.bot_has_permissions(kick_members=True, add_reactions=True, external_emojis=True)
     async def mkick(self, ctx, targets: Greedy[PotentialID], *, reason: Reason = ""):
         """mkick_help"""
         if reason == "":
@@ -274,34 +273,32 @@ class Moderation(BaseCog):
 
     @commands.guild_only()
     @commands.command()
-    @require_cache()
+    @commands.bot_has_permissions(external_emojis=True, add_reactions=True)
     async def bean(self, ctx, user: discord.Member, *, reason: Reason = ""):
         """bean_help"""
         if reason == "":
             reason = Translator.translate("no_reason", ctx.guild.id)
-        if True:
-            await MessageUtils.send_to(ctx, "YES", "bean_confirmation", user=Utils.clean_user(user), user_id=user.id, reason=reason)
-            try :
-                message = await self.bot.wait_for("message", timeout=60*5, check=lambda m: m.author == user and m.channel.guild == ctx.guild and m.channel.permissions_for(m.guild.me).add_reactions)
-            except asyncio.TimeoutError:
-                pass
-            else:
-                try:
-                    await message.add_reaction(Emoji.get_emoji('BEAN'))
-                except Forbidden:
-                    await message.channel.send(Emoji.get_chat_emoji('BEAN'))
+        await MessageUtils.send_to(ctx, "YES", "bean_confirmation", user=Utils.clean_user(user), user_id=user.id, reason=reason)
+        try :
+            message = await self.bot.wait_for("message", timeout=60*5, check=lambda m: m.author == user and m.channel.guild == ctx.guild and m.channel.permissions_for(m.guild.me).add_reactions)
+        except asyncio.TimeoutError:
+            pass
+        else:
+            try:
+                await message.add_reaction(Emoji.get_emoji('BEAN'))
+            except Forbidden:
+                await message.channel.send(Emoji.get_chat_emoji('BEAN'))
 
     @commands.command(aliases=["🚪"])
     @commands.guild_only()
-    @commands.bot_has_permissions(ban_members=True, add_reactions=True)
-    @require_cache()
+    @commands.bot_has_permissions(ban_members=True, add_reactions=True, external_emojis=True)
     async def ban(self, ctx: commands.Context, user: DiscordUser, *, reason: Reason = ""):
         """ban_help"""
         if reason == "":
             reason = Translator.translate("no_reason", ctx.guild.id)
 
-        if ctx.guild.get_member(user.id) is not None:
-            member = ctx.guild.get_member(user.id)
+        member = await Utils.get_member(ctx.bot, ctx.guild, user.id)
+        if member is not None:
             await self._ban_command(ctx, member, reason, 0)
         else:
 
@@ -318,14 +315,13 @@ class Moderation(BaseCog):
 
     @commands.command(aliases=["clean_ban"])
     @commands.guild_only()
-    @commands.bot_has_permissions(ban_members=True)
-    @require_cache()
+    @commands.bot_has_permissions(ban_members=True, add_reactions=True, external_emojis=True)
     async def cleanban(self, ctx: commands.Context, user: DiscordUser, days: Optional[RangedIntBan]=1, *, reason: Reason = ""):
         """clean_ban_help"""
         await self._ban_command(ctx, user, reason, days)
 
     async def _ban_command(self, ctx, user, reason, days):
-        member = ctx.guild.get_member(user.id)
+        member = await Utils.get_member(ctx.bot, ctx.guild, user.id)
 
         if reason == "":
             reason = Translator.translate("no_reason", ctx.guild.id)
@@ -338,8 +334,7 @@ class Moderation(BaseCog):
 
     @commands.command()
     @commands.guild_only()
-    @commands.bot_has_permissions(ban_members=True)
-    @require_cache()
+    @commands.bot_has_permissions(ban_members=True, add_reactions=True, external_emojis=True)
     async def tempban(self, ctx: commands.Context, user: DiscordUser, duration: Duration, *, reason: Reason = ""):
         """tempban_help"""
         if duration.unit is None:
@@ -350,7 +345,7 @@ class Moderation(BaseCog):
         if reason == "":
             reason = Translator.translate("no_reason", ctx.guild.id)
 
-        member = ctx.guild.get_member(user.id)
+        member = await Utils.get_member(self.bot, ctx.guild, user.id)
         if member is not None:
             allowed, message = Actions.can_act("ban", ctx, member)
         else:
@@ -429,8 +424,7 @@ class Moderation(BaseCog):
 
     @commands.guild_only()
     @commands.command(aliases=["🚪🚪"])
-    @commands.bot_has_permissions(ban_members=True, add_reactions=True)
-    @require_cache()
+    @commands.bot_has_permissions(ban_members=True, add_reactions=True, external_emojis=True)
     async def mban(self, ctx, targets: Greedy[PotentialID], *, reason: Reason = ""):
         """mban_help"""
         if reason == "":
@@ -451,7 +445,7 @@ class Moderation(BaseCog):
 
     @commands.guild_only()
     @commands.command()
-    @commands.bot_has_permissions(ban_members=True, add_reactions=True)
+    @commands.bot_has_permissions(ban_members=True, add_reactions=True, external_emojis=True)
     async def munban(self, ctx, targets: Greedy[PotentialID], *, reason: Reason = ""):
         """munban_help"""
         if reason == "":
@@ -459,7 +453,7 @@ class Moderation(BaseCog):
 
         async def yes():
             pmessage = await MessageUtils.send_to(ctx, "REFRESH", "processing")
-            failures = await Actions.mass_action(ctx, "unban", targets, self._unban, reason=reason, require_on_server=False, confirm=False, check_bot_ability=False, dm_action=False)
+            failures = await Actions.mass_action(ctx, "unban", targets, self._unban, reason=reason, require_on_server=False, confirm=False, check_bot_ability=False)
             await pmessage.delete()
             await MessageUtils.send_to(ctx, "YES", "munban_confirmation", count=len(targets) - len(failures))
             if len(failures) > 0:
@@ -472,7 +466,7 @@ class Moderation(BaseCog):
 
     @commands.guild_only()
     @commands.command(aliases=["mcb"])
-    @commands.bot_has_permissions(ban_members=True, add_reactions=True)
+    @commands.bot_has_permissions(ban_members=True, add_reactions=True, external_emojis=True)
     async def mcleanban(self, ctx, targets: Greedy[PotentialID], days: Optional[RangedIntBan]=1, *, reason: Reason = ""):
         """mcleanban_help"""
         if reason == "":
@@ -519,7 +513,6 @@ class Moderation(BaseCog):
     @commands.command(aliases=["softban"])
     @commands.guild_only()
     @commands.bot_has_permissions(ban_members=True)
-    @require_cache()
     async def cleankick(self, ctx: commands.Context, user: discord.Member, *, reason: Reason = ""):
         """softban_help"""
         if reason == "":
@@ -578,8 +571,7 @@ class Moderation(BaseCog):
 
     @commands.command()
     @commands.guild_only()
-    @commands.bot_has_permissions(ban_members=True, add_reactions=True)
-    @require_cache()
+    @commands.bot_has_permissions(ban_members=True, add_reactions=True, external_emojis=True)
     async def forceban(self, ctx: commands.Context, user: DiscordUser, *, reason: Reason = ""):
         """forceban_help"""
         if reason == "":
@@ -662,9 +654,8 @@ class Moderation(BaseCog):
         GearbotLogging.log_key(ctx.guild.id, 'unban_log', user=Utils.clean_user(member.user), user_id=member.user.id, moderator=Utils.clean_user(ctx.author), moderator_id=ctx.author.id, reason=reason, inf=i.id)
 
     @commands.command()
-    @bot_has_guild_permission(manage_roles=True)
-    @commands.bot_has_permissions(add_reactions=True)
-    @require_cache()
+    @commands.bot_has_guild_permissions(manage_roles=True)
+    @commands.bot_has_permissions(add_reactions=True, external_emojis=True)
     async def mute(self, ctx: commands.Context, target: discord.Member, duration: Duration, *, reason: Reason = ""):
         """mute_help"""
         if duration.unit is None:
@@ -687,7 +678,12 @@ class Moderation(BaseCog):
                     if ctx.guild.me.top_role > role:
                         duration_seconds = duration.to_seconds(ctx)
                         if duration_seconds > 0:
-                            infraction = await Infraction.get_or_none(user_id = target.id, type = "Mute", guild_id = ctx.guild.id, active=True)
+                            try:
+                                infraction = await Infraction.get_or_none(user_id = target.id, type = "Mute", guild_id = ctx.guild.id, active=True)
+                            except MultipleObjectsReturned:
+                                infraction = await Infraction.filter(user_id = target.id, type = "Mute", guild_id = ctx.guild.id, active=True).first()
+                                await Infraction.filter(user_id = target.id, type = "Mute", guild_id = ctx.guild.id, active=True, id__not=infraction.id).update(active=False)
+                                await MessageUtils.send_to(ctx, "BUG", "CRITICAL ERROR: This user somehow has multiple active mutes, this should not be possile. The older corrupted mutes have been deactived and this command used only the most recent one to work. Plese let me know about this on the support server (link found in the about command or website) for further investigation!",translate=False)
 
                             if infraction is None:
                                 await target.add_roles(role, reason=Utils.trim_message(
@@ -798,7 +794,8 @@ class Moderation(BaseCog):
 
     @commands.guild_only()
     @commands.command()
-    @commands.bot_has_permissions(manage_roles=True, add_reactions=True)
+    @bot_has_guild_permission(manage_roles=True)
+    @commands.bot_has_permissions(add_reactions=True, external_emojis=True)
     async def munmute(self, ctx, targets: Greedy[PotentialID], *, reason: Reason = ""):
         """munmute_help"""
         if reason == "":
@@ -819,7 +816,7 @@ class Moderation(BaseCog):
 
     @commands.command()
     @commands.guild_only()
-    @commands.bot_has_permissions(manage_roles=True)
+    @bot_has_guild_permission(manage_roles=True)
     async def unmute(self, ctx: commands.Context, target: discord.Member, *, reason: Reason = ""):
         """unmute_help"""
         await self._unmute(ctx, target, reason=reason, confirm=True)
@@ -838,16 +835,29 @@ class Moderation(BaseCog):
             if role is None:
                 if confirm:
                     await MessageUtils.send_to(ctx, 'NO', 'unmute_fail_role_removed')
+                    return
                 else:
                     raise ActionFailed(Translator.translate("unmute_fail_role_removed", ctx))
             else:
-                infraction = await Infraction.get_or_none(user_id = target.id, type = "Mute", guild_id = ctx.guild.id, active=True)
+                try:
+                    infraction = await Infraction.get_or_none(user_id = target.id, type = "Mute", guild_id = ctx.guild.id, active=True)
+                except MultipleObjectsReturned:
+                    infraction = await Infraction.filter(user_id = target.id, type = "Mute", guild_id = ctx.guild.id, active=True).first()
+                    await Infraction.filter(user_id = target.id, type = "Mute", guild_id = ctx.guild.id, active=True, id__not=infraction.id).update(active=False)
+                    await MessageUtils.send_to(ctx, "BUG", "CRITICAL ERROR: This user somehow has multiple active mutes, this should not be possile. The older corrupted mutes have been deactived and this command used only the most recent one to work. Plese let me know about this on the support server (link found in the about command or website) for further investigation!",translate=False)
                 if role not in target.roles and infraction is None:
                     if confirm:
                         await MessageUtils.send_to(ctx, 'WHAT', 'unmute_not_muted', user=Utils.clean_user(target))
+                        return
                     else:
                         raise ActionFailed(Translator.translate("unmute_not_muted", ctx, user=Utils.clean_user(target)))
                 else:
+                    if role.position >= ctx.me.top_role.position:
+                        if confirm:
+                            await MessageUtils.send_to(ctx, 'NO', 'unmute_higher_role')
+                            return
+                        else:
+                            raise ActionFailed(Translator.translate("unmute_higher_role", ctx))
                     i = await InfractionUtils.add_infraction(ctx.guild.id, target.id, ctx.author.id, "Unmute", reason)
                     name = Utils.clean_user(target)
                     if Configuration.get_var(ctx.guild.id, "INFRACTIONS", "DM_ON_UNMUTE") and dm_action:
@@ -871,7 +881,7 @@ class Moderation(BaseCog):
         if user is None:
             user = member = ctx.author
         else:
-            member = None if ctx.guild is None else ctx.guild.get_member(user.id)
+            member = None if ctx.guild is None else await Utils.get_member(self.bot, ctx.guild, user.id)
         embed = discord.Embed(color=member.top_role.color if member is not None else 0x00cea2, timestamp=ctx.message.created_at)
         embed.set_thumbnail(url=user.avatar_url)
         embed.set_footer(text=Translator.translate('requested_by', ctx, user=ctx.author.name),
@@ -891,13 +901,13 @@ class Moderation(BaseCog):
 
             role_list = [role.mention for role in reversed(member.roles) if role is not ctx.guild.default_role]
             if len(role_list) > 60:
-                embed.add_field(name=Translator.translate('all_roles', ctx), value=Translator.translate('too_many_many_roles', ctx))
+                embed.add_field(name=Translator.translate('all_roles', ctx), value=Translator.translate('too_many_many_roles', ctx), inline=False)
             elif len(role_list) > 40:
-                embed.add_field(name=Translator.translate('all_roles', ctx), value=Translator.translate('too_many_roles', ctx))
+                embed.add_field(name=Translator.translate('all_roles', ctx), value=Translator.translate('too_many_roles', ctx), inline=False)
             elif len(role_list) > 0:
-                embed.add_field(name=Translator.translate('all_roles', ctx), value=" ".join(role_list))
+                embed.add_field(name=Translator.translate('all_roles', ctx), value=" ".join(role_list), inline=False)
             else:
-                embed.add_field(name=Translator.translate('all_roles', ctx), value=Translator.translate("no_roles", ctx))
+                embed.add_field(name=Translator.translate('all_roles', ctx), value=Translator.translate("no_roles", ctx), inline=False)
 
             embed.add_field(name=Translator.translate('joined_at', ctx),
                             value=f"``{member.joined_at}`` ({(ctx.message.created_at - member.joined_at).days} days ago)",
@@ -926,8 +936,7 @@ class Moderation(BaseCog):
     async def archive(self, ctx):
         """archive_help"""
         if ctx.invoked_subcommand is None:
-            await ctx.send(
-                f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_subcommand', ctx, prefix=ctx.prefix)}")
+            await ctx.invoke(self.bot.get_command("help"), query="archive")
 
     @archive.command()
     async def channel(self, ctx, channel: Union[discord.TextChannel, int] = None, amount=5000):
@@ -945,7 +954,7 @@ class Moderation(BaseCog):
             channel_name = channel.name
         if Configuration.get_var(ctx.guild.id, "MESSAGE_LOGS", "ENABLED"):
             async with ctx.typing():
-                messages = await LoggedMessage.filter(server=ctx.guild.id, channel=channel_id).order_by("-messageid").limit(amount).prefetch_related("attachments")
+                messages = await LoggedMessage.filter(server=ctx.guild.id, channel=channel_id).order_by("-messageid").limit(amount).prefetch_related("attachments") + DBUtils.get_messages_for_channel(channel_id)
                 await Archive.ship_messages(ctx, messages, Translator.translate(f'archived_channel_count', ctx, count=len(messages), channel=Utils.escape_markdown(channel_name)))
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
@@ -959,7 +968,7 @@ class Moderation(BaseCog):
         if Configuration.get_var(ctx.guild.id, "MESSAGE_LOGS", "ENABLED"):
             for channel in category.text_channels:
                 async with ctx.typing():
-                    messages = await LoggedMessage.filter(server=ctx.guild.id, channel=channel.id).order_by("-messageid").limit(amount).prefetch_related("attachments")
+                    messages = await LoggedMessage.filter(server=ctx.guild.id, channel=channel.id).order_by("-messageid").limit(amount).prefetch_related("attachments") + DBUtils.get_messages_for_channel(channel.id)
                     await Archive.ship_messages(ctx, messages, Translator.translate(f'archived_category_count', ctx, count=len(messages), channel=Utils.escape_markdown(channel.name), category=Utils.escape_markdown(category.name)))
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
@@ -972,7 +981,7 @@ class Moderation(BaseCog):
             return
         if Configuration.get_var(ctx.guild.id, "MESSAGE_LOGS", "ENABLED"):
             async with ctx.typing():
-                messages = await LoggedMessage.filter(server=ctx.guild.id, author=user).order_by("-messageid").limit(amount).prefetch_related("attachments")
+                messages = await LoggedMessage.filter(server=ctx.guild.id, author=user).order_by("-messageid").limit(amount).prefetch_related("attachments") + DBUtils.get_messages_for_user_in_guild(user, ctx.guild.id)
                 await Archive.ship_messages(ctx, messages, Translator.translate(f'archived_user_count', ctx, count=len(messages), user=await Utils.username(user)))
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
@@ -982,13 +991,12 @@ class Moderation(BaseCog):
     @commands.bot_has_permissions(manage_messages=True)
     async def clean(self, ctx):
         """clean_help"""
-        if ctx.invoked_subcommand == self.clean:
+        if ctx.invoked_subcommand is None:
             await ctx.invoke(self.bot.get_command("help"), query="clean")
 
     @clean.command("user")
     @commands.guild_only()
     @commands.bot_has_permissions(manage_messages=True)
-    @require_cache()
     async def clean_user(self, ctx, users: Greedy[DiscordUser], amount: RangedInt(1) = 50):
         """clean_user_help"""
         if len(users) is 0:
@@ -1038,7 +1046,6 @@ class Moderation(BaseCog):
     @clean.command("everywhere")
     @commands.guild_only()
     @commands.bot_has_permissions(manage_messages=True)
-    @require_cache()
     async def clean_everywhere(self, ctx, users: Greedy[DiscordUser], amount: RangedInt(1) = 50):
         """clean_everywhere_help"""
         if len(users) is 0:
@@ -1109,6 +1116,8 @@ class Moderation(BaseCog):
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel: discord.abc.GuildChannel):
+        # sleep a little, sometimes discord sends the event too soon
+        await asyncio.sleep(5)
         guild: discord.Guild = channel.guild
         roleid = Configuration.get_var(guild.id, "ROLES", "MUTE_ROLE")
         if roleid is not 0:
@@ -1119,13 +1128,13 @@ class Moderation(BaseCog):
                         await channel.set_permissions(role, reason=Translator.translate('mute_setup', guild.id),
                                                       send_messages=False,
                                                       add_reactions=False)
-                    except discord.Forbidden:
+                    except (discord.Forbidden, discord.NotFound):
                         pass
                 else:
                     try:
                         await channel.set_permissions(role, reason=Translator.translate('mute_setup', guild.id),
                                                       speak=False, connect=False)
-                    except discord.Forbidden:
+                    except (discord.Forbidden, discord.NotFound):
                         pass
 
     @commands.Cog.listener()
@@ -1182,7 +1191,7 @@ class Moderation(BaseCog):
             return await self.end_infraction(infraction)
 
         role = Configuration.get_var(guild.id, "ROLES", "MUTE_ROLE")
-        member = guild.get_member(infraction.user_id)
+        member = await Utils.get_member(self.bot, guild, infraction.user_id)
         role = guild.get_role(role)
         if role is None or member is None:
             return await self.end_infraction(infraction)  # role got removed or member left
@@ -1271,6 +1280,62 @@ class Moderation(BaseCog):
         pipeline.expire(f"users:{member.id}", 3000)  # 5 minute cache life
 
         await pipeline.execute()
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if message.guild is None or message.webhook_id is not None or message.channel is None or isinstance(message.channel, DMChannel) or self.bot.user.id == message.author.id:
+            return
+        if message.channel.guild is not None:
+            await self.check_for_flagged_words(message.content, message.channel.guild.id, message.channel.id, message.id, message.author)
+
+    @commands.Cog.listener()
+    async def on_raw_message_edit(self, event: discord.RawMessageUpdateEvent):
+        channel = self.bot.get_channel(int(event.data["channel_id"]))
+        if channel is None or isinstance(channel, DMChannel) or "content" not in event.data:
+            return
+        await self.check_for_flagged_words(event.data["content"], channel.guild.id, channel.id, event.message_id)
+
+    async def check_for_flagged_words(self, content, guild_id, channel_id, message_id, author=None):
+        if content is None:
+            return
+        content = content.lower()
+        token_list = Configuration.get_var(guild_id, "FLAGGING", "TOKEN_LIST")
+        word_list = Configuration.get_var(guild_id, "FLAGGING", "WORD_LIST")
+
+        for bad in token_list:
+            if fnmatch.fnmatchcase(content, f'*{bad.lower()}*'):
+                await self.flag_message(content, bad, guild_id, channel_id, message_id, author, "token")
+                return
+
+        if len(word_list) > 0:
+            if guild_id not in self.regexes:
+                regex = re.compile(r"\b(" + '|'.join(re.escape(word) for word in word_list) + r")\b", re.IGNORECASE)
+                self.regexes[guild_id] = regex
+            else:
+                regex = self.regexes[guild_id]
+            match = regex.findall(content)
+            if len(match):
+                await self.flag_message(content, match[0], guild_id, channel_id, message_id, author, "word")
+                return
+
+    async def flag_message(self, content, flagged, guild_id, channel_id, message_id, author=None, type=""):
+        if author is None:
+            message = await MessageUtils.get_message_data(self.bot, message_id)
+            if message is None:
+                try:
+                    channel = self.bot.get_channel(channel_id)
+                    message = await channel.fetch_message(message_id)
+                except DiscordException:
+                    pass
+            if message is not None:
+                author = await Utils.get_member(self.bot, self.bot.get_guild(guild_id), message.author)
+        if author is None or author.id == self.bot.user.id or Permissioncheckers.get_user_lvl(author.guild, author) >= 2:
+            return
+
+        content = Utils.trim_message(content, 1700)
+        content = Utils.replace_lookalikes(content)
+        link = MessageUtils.construct_jumplink(guild_id, channel_id, message_id)
+        GearbotLogging.log_key(guild_id, f"flagged_{type}", user=Utils.clean_user(author), user_id=author.id, flagged=flagged, channel=f"<#{channel_id}>", content=content, link=link)
 
 
 def setup(bot):

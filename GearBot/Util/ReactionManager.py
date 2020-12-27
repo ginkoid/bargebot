@@ -6,7 +6,7 @@ from Util import Emoji, Pages, InfractionUtils, Selfroles, Translator, Configura
 
 
 async def paged(bot, message, user_id, reaction, **kwargs):
-    user = message.channel.guild.get_member(user_id)
+    user = await Utils.get_member(bot, message.channel.guild, user_id)
     if user is None:
         await remove_reaction(message, reaction, await bot.fetch_user(user_id))
         return
@@ -26,7 +26,7 @@ async def paged(bot, message, user_id, reaction, **kwargs):
 
 
 async def self_roles(bot, message, user_id, reaction, **kwargs):
-    user = message.channel.guild.get_member(user_id)
+    user = await Utils.get_member(bot, message.channel.guild, user_id)
     if user is None:
         if user_id is not 0:
             await remove_reaction(message, reaction, await bot.fetch_user(user_id))
@@ -69,7 +69,7 @@ async def self_roles(bot, message, user_id, reaction, **kwargs):
                         return kwargs
                 else:
                     if message.channel.permissions_for(message.channel.guild.me).send_messages:
-                        await MessageUtils.send_to(message.channel, "YES", "role_joined" if add_role else "role_left", role_name=await Utils.clean(role.name), delete_after=10)
+                        await MessageUtils.send_to(message.channel, "YES", "role_joined" if add_role else "role_left", role_name=await Utils.clean(role.name), user=user.name, delete_after=10)
                         bot.loop.create_task(remove_reaction(message, reaction, user))
                         return kwargs
 
@@ -88,7 +88,7 @@ async def self_roles(bot, message, user_id, reaction, **kwargs):
     return kwargs
 
 async def inf_search(bot, message, user_id, reaction, **kwargs):
-    user = message.channel.guild.get_member(user_id)
+    user = await Utils.get_member(bot, message.channel.guild, user_id)
     left = Emoji.get_chat_emoji('LEFT')
     right = Emoji.get_chat_emoji('RIGHT')
     refresh = Emoji.get_chat_emoji('REFRESH')

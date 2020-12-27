@@ -1,16 +1,17 @@
-import re
-import typing
 from datetime import datetime
+import re
 
 import discord
+from discord import User
 from discord.ext import commands
-from discord.ext.commands import BadArgument, Greedy
+from discord.ext.commands import BadArgument, Greedy, BucketType
+from tortoise.query_utils import Q
 
 from Cogs.BaseCog import BaseCog
 from Util import InfractionUtils, Emoji, Utils, GearbotLogging, Translator, Configuration, \
     Confirmation, MessageUtils, ReactionManager, Pages, Actions
 from Util.Converters import UserID, Reason, InfSearchLocation, ServerInfraction, PotentialID
-from Util.Permissioncheckers import require_cache
+from database.DatabaseConnector import Infraction
 
 
 class Infractions(BaseCog):
@@ -35,7 +36,6 @@ class Infractions(BaseCog):
 
     @commands.guild_only()
     @commands.command()
-    @require_cache()
     async def warn(self, ctx: commands.Context, member: discord.Member, *, reason: Reason):
         """warn_help"""
         # don't allow warning GearBot, get some feedback about issues instead
@@ -64,8 +64,7 @@ class Infractions(BaseCog):
 
     @commands.guild_only()
     @commands.command()
-    @commands.bot_has_permissions(add_reactions=True)
-    @require_cache()
+    @commands.bot_has_permissions(add_reactions=True, external_emojis=True)
     async def mwarn(self, ctx, targets: Greedy[PotentialID], *, reason: Reason = ""):
         """mwarn_help"""
         if reason == "":
@@ -94,11 +93,13 @@ class Infractions(BaseCog):
     @commands.group(aliases=["infraction", "infractions"])
     async def inf(self, ctx: commands.Context):
         """inf_help"""
-        pass
+        if ctx.subcommand_passed is None:
+            await ctx.invoke(self.bot.get_command("help"), query="inf")
 
     @inf.command()
+    @commands.bot_has_permissions(add_reactions=True, external_emojis=True)
     async def search(self, ctx: commands.Context, fields: commands.Greedy[InfSearchLocation] = None, *,
-                     query: typing.Union[UserID, str] = ""):
+                     query: str = ""):
         """inf_search_help"""
         if fields is None or len(fields) is 0:
             fields = ["[user]", "[mod]", "[reason]"]
@@ -119,6 +120,11 @@ class Infractions(BaseCog):
                     query = (" ".join(parts[:-1])).strip()
             except ValueError:
                 amount = 100
+                if parts[0] != "":
+                    try:
+                        query = await UserID().convert(ctx, parts[0])
+                    except BadArgument:
+                        query = parts[0]
             else:
                 if 1 < amount > 500:
                     if query == "":
@@ -181,6 +187,7 @@ class Infractions(BaseCog):
         re.IGNORECASE)
 
     @inf.command("info", aliases=["details"])
+    @commands.bot_has_permissions(embed_links=True)
     async def info(self, ctx, infraction: ServerInfraction):
         """inf_info_help"""
         embed = discord.Embed(color=0x00cea2,

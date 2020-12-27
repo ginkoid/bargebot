@@ -1,3 +1,5 @@
+import asyncio
+
 import discord
 import pytz
 from discord import TextChannel
@@ -87,6 +89,7 @@ class ServerAdmin(BaseCog):
         "VOICE_CHANGES",
         "SPAM_VIOLATION",
         "CONFIG_CHANGES",
+        "MESSAGE_FLAGS",
         "FUTURE_LOGS"
     ]
 
@@ -97,6 +100,8 @@ class ServerAdmin(BaseCog):
         Pages.register("censor_list", self._censorlist_init, self._censorklist_update)
         Pages.register("word_censor_list", self._word_censorlist_init, self._word_censor_list_update)
         Pages.register("full_message_censor_list", self._full_censorlist_init, self._full_censor_list_update)
+        Pages.register("flag_list", self._flaglist_init, self._flaglist_update)
+        Pages.register("word_flag_list", self._word_flaglist_init, self._word_flag_list_update)
 
     @commands.guild_only()
     @commands.command(aliases=["deletecategory"])
@@ -124,8 +129,8 @@ class ServerAdmin(BaseCog):
     @commands.group(aliases = ["config", "cfg"])
     async def configure(self, ctx:commands.Context):
         """configure_help"""
-        if ctx.subcommand_passed is None:
-            await ctx.send("See the subcommands (!help configure) for configurations.")
+        if ctx.invoked_subcommand is None:
+            await ctx.invoke(self.bot.get_command("help"), query="configure")
 
     @configure.command()
     async def prefix(self, ctx:commands.Context, *, new_prefix:str = None):
@@ -143,6 +148,7 @@ class ServerAdmin(BaseCog):
         """configure_admin_roles_help"""
         if ctx.invoked_subcommand is None:
             await list_list(ctx, 'admin')
+        Configuration.validate_config(ctx.guild.id)
 
     @admin_roles.command(name="add")
     async def add_admin_role(self, ctx, *, role:discord.Role):
@@ -157,6 +163,7 @@ class ServerAdmin(BaseCog):
         """configure_mod_roles_help"""
         if ctx.invoked_subcommand is None:
             await list_list(ctx, 'mod')
+        Configuration.validate_config(ctx.guild.id)
 
     @mod_roles.command(name="add")
     async def add_mod_role(self, ctx, *, role: discord.Role):
@@ -171,6 +178,7 @@ class ServerAdmin(BaseCog):
         """configure_trusted_roles_help"""
         if ctx.invoked_subcommand is None:
             await list_list(ctx, 'trusted')
+        Configuration.validate_config(ctx.guild.id)
 
     @trusted_roles.command(name="add")
     async def add_trusted_role(self, ctx, *, role: discord.Role):
@@ -192,20 +200,29 @@ class ServerAdmin(BaseCog):
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('mute_missing_perm', ctx)}")
             return
         if not guild.me.top_role > role:
-            await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('mute_missing_perm', ctx, role=role.mention)}")
+            await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('role_too_high_add', ctx, role=role.name)}")
             return
         Configuration.set_var(ctx.guild.id, "ROLES", "MUTE_ROLE", int(role.id))
         await ctx.send(f"{Emoji.get_chat_emoji('YES')} {Translator.translate('mute_role_confirmation', ctx, role=role.mention)}")
         failed = []
+        for category in guild.categories:
+            if category.permissions_for(guild.me).manage_channels:
+                await category.set_permissions(role, reason=Translator.translate('mute_setup', ctx), send_messages=False, add_reactions=False, speak=False, connect=False)
+
+        # sleep a bit so we have time to receive the update events
+        await asyncio.sleep(2)
+
         for channel in guild.text_channels:
-            try:
-                await channel.set_permissions(role, reason=Translator.translate('mute_setup', ctx), send_messages=False, add_reactions=False)
-            except discord.Forbidden as ex:
+            if channel.permissions_for(guild.me).manage_channels:
+                if channel.overwrites_for(role).is_empty():
+                    await channel.set_permissions(role, reason=Translator.translate('mute_setup', ctx), send_messages=False, add_reactions=False)
+            else:
                 failed.append(channel.mention)
         for channel in guild.voice_channels:
-            try:
-                await channel.set_permissions(role, reason=Translator.translate('mute_setup', ctx), speak=False, connect=False)
-            except discord.Forbidden as ex:
+            if channel.permissions_for(guild.me).manage_channels:
+                if channel.overwrites_for(role).is_empty():
+                    await channel.set_permissions(role, reason=Translator.translate('mute_setup', ctx), speak=False, connect=False)
+            else:
                 failed.append(Translator.translate('voice_channel', ctx, channel=channel.name))
         if len(failed) > 0:
             message = f"{Emoji.get_chat_emoji('WARNING')} {Translator.translate('mute_setup_failures', ctx, role=role.mention)}\n"
@@ -424,7 +441,8 @@ class ServerAdmin(BaseCog):
     @configure.group()
     async def lvl4(self, ctx):
         """lvl4_help"""
-        pass
+        if ctx.invoked_subcommand is None:
+            await ctx.invoke(self.bot.get_command("help"), query="configure lvl4")
 
     @lvl4.command(name="add")
     async def add_lvl4(self, ctx, command:str, person:discord.Member):
@@ -557,7 +575,7 @@ class ServerAdmin(BaseCog):
         if len(features) > 0:
             async def yes():
                 await ctx.invoke(self.enable_feature, ", ".join(features))
-            await Confirmation.confirm(ctx, MessageUtils.assemble(ctx.guild.id, 'WHAT', 'confirmation_enable_features', count=len(features)) + ', '.join(features), on_yes=yes)
+            await Confirmation.confirm(ctx, MessageUtils.assemble(ctx.guild.id, 'WHAT', 'confirmation_enable_features', count=len(features)) + ' ' + ', '.join(features), on_yes=yes)
 
     @logging.command(name="remove")
     async def remove_logging(self, ctx, cid: LoggingChannel, *, types):
@@ -735,14 +753,14 @@ class ServerAdmin(BaseCog):
     @commands.guild_only()
     async def ignored_channels(self, ctx):
         """ignored_channels_help"""
-        if ctx.invoked_subcommand == self.ignored_channels:
+        if ctx.invoked_subcommand is None:
             await ctx.invoke(self.bot.get_command("help"), query="configure ignored_channels")
 
     @ignored_channels.group("changes")
     @commands.guild_only()
     async def ignored_channels_changes(self, ctx):
         """ignored_channels_changes_help"""
-        if ctx.invoked_subcommand == self.ignored_channels_changes:
+        if ctx.invoked_subcommand is None:
             await ctx.invoke(self.bot.get_command("help"), query="configure ignored_channels changes")
 
     @ignored_channels_changes.command("add")
@@ -787,8 +805,8 @@ class ServerAdmin(BaseCog):
     @commands.guild_only()
     async def ignored_channels_edits(self, ctx):
         """ignored_channels_edits_help"""
-        if ctx.invoked_subcommand == self.ignored_channels_edits:
-            await ctx.invoke(self.bot.get_command("help"), query="configure ignored_channels other")
+        if ctx.invoked_subcommand is None:
+            await ctx.invoke(self.bot.get_command("help"), query="configure ignored_channels edits")
 
     @ignored_channels_edits.command("add")
     async def ignored_channels_edits_add(self, ctx, channel: TextChannel):
@@ -824,7 +842,8 @@ class ServerAdmin(BaseCog):
     @commands.guild_only()
     async def disable(self, ctx:commands.Context):
         """disable_help"""
-        pass
+        if ctx.invoked_subcommand is None:
+            await ctx.invoke(self.bot.get_command("help"), query="disable")
 
     @disable.command()
     async def mute(self, ctx:commands.Context):
@@ -886,9 +905,9 @@ class ServerAdmin(BaseCog):
         await ctx.send(
             f"{Emoji.get_chat_emoji('YES')} {Translator.translate('embed_log_' + ('enabled' if value else 'disabled'), ctx.guild.id)}")
 
-    @configure.group(aliases=["censorlist"])
+    @configure.group(aliases=["censorlist", "cl"])
     async def censor_list(self, ctx):
-        "censor_list_help"
+        """censor_list_help"""
         if ctx.invoked_subcommand is None:
             await Pages.create_new(self.bot, "censor_list", ctx)
 
@@ -924,7 +943,7 @@ class ServerAdmin(BaseCog):
             await MessageUtils.send_to(ctx, "YES", "entry_removed", entry=word)
             Configuration.save(ctx.guild.id)
 
-    @configure.group()
+    @configure.group(aliases=["wordcensorlist", "wcl"])
     async def word_censor_list(self, ctx):
         if ctx.invoked_subcommand is None:
             await Pages.create_new(self.bot, "word_censor_list", ctx)
@@ -966,6 +985,88 @@ class ServerAdmin(BaseCog):
             Configuration.save(ctx.guild.id)
             if ctx.guild.id in self.bot.get_cog("Censor").regexes:
                 del self.bot.get_cog("Censor").regexes[ctx.guild.id]
+
+    @configure.group(aliases=["flaglist", "fl"])
+    async def flag_list(self, ctx):
+        """flag_list_help"""
+        if ctx.invoked_subcommand is None:
+            await Pages.create_new(self.bot, "flag_list", ctx)
+
+    @staticmethod
+    async def _flaglist_init(ctx):
+        pages = Pages.paginate("\n".join(Configuration.get_var(ctx.guild.id, "FLAGGING", "TOKEN_LIST")))
+        return f"**{Translator.translate(f'flagged_list', ctx, server=ctx.guild.name, page_num=1, pages=len(pages))}**```\n{pages[0]}```", None, len(pages) > 1
+
+    @staticmethod
+    async def _flaglist_update(ctx, message, page_num, action, data):
+        pages = Pages.paginate("\n".join(Configuration.get_var(message.channel.guild.id, "FLAGGING", "TOKEN_LIST")))
+        page, page_num = Pages.basic_pages(pages, page_num, action)
+        data["page"] = page_num
+        return f"**{Translator.translate(f'flagged_list', message.channel.guild.id, server=message.channel.guild.name, page_num=page_num + 1, pages=len(pages))}**```\n{page}```", None, data
+
+    @flag_list.command("add")
+    async def flag_list_add(self, ctx, *, word: str):
+        censor_list = Configuration.get_var(ctx.guild.id, "FLAGGING", "TOKEN_LIST")
+        if word.lower() in censor_list:
+            await MessageUtils.send_to(ctx, "NO", "already_flagged", word=word)
+        else:
+            censor_list.append(word.lower())
+            await MessageUtils.send_to(ctx, "YES", "flag_added", entry=word)
+            Configuration.save(ctx.guild.id)
+
+    @flag_list.command("remove")
+    async def flag_list_remove(self, ctx, *, word: str):
+        censor_list = Configuration.get_var(ctx.guild.id, "FLAGGING", "TOKEN_LIST")
+        if word not in censor_list:
+            await MessageUtils.send_to(ctx, "NO", "not_flagged", word=word)
+        else:
+            censor_list.remove(word)
+            await MessageUtils.send_to(ctx, "YES", "flag_removed", entry=word)
+            Configuration.save(ctx.guild.id)
+
+    @configure.group(aliases=["wordflaglist", "wfl"])
+    async def word_flag_list(self, ctx):
+        """word_flag_list_help"""
+        if ctx.invoked_subcommand is None:
+            await Pages.create_new(self.bot, "word_flag_list", ctx)
+
+    @staticmethod
+    async def _word_flaglist_init(ctx):
+        pages = Pages.paginate("\n".join(Configuration.get_var(ctx.guild.id, "FLAGGING", "WORD_LIST")))
+        return f"**{Translator.translate(f'flagged_word_list', ctx, server=ctx.guild.name, page_num=1, pages=len(pages))}**```\n{pages[0]}```", None, len(
+            pages) > 1
+
+    @staticmethod
+    async def _word_flag_list_update(ctx, message, page_num, action, data):
+        pages = Pages.paginate(
+            "\n".join(Configuration.get_var(message.channel.guild.id, "FLAGGING", "WORD_LIST")))
+        page, page_num = Pages.basic_pages(pages, page_num, action)
+        data["page"] = page_num
+        return f"**{Translator.translate(f'flagged_word_list', message.channel.guild.id, server=message.channel.guild.name, page_num=page_num + 1, pages=len(pages))}**```\n{page}```", None, data
+
+    @word_flag_list.command("add")
+    async def word_flag_list_add(self, ctx, *, word: str):
+        censor_list = Configuration.get_var(ctx.guild.id, "FLAGGING", "WORD_LIST")
+        if word.lower() in censor_list:
+            await MessageUtils.send_to(ctx, "NO", "already_flagged", word=word)
+        else:
+            censor_list.append(word.lower())
+            await MessageUtils.send_to(ctx, "YES", "flag_added", entry=word)
+            Configuration.save(ctx.guild.id)
+            if ctx.guild.id in self.bot.get_cog("Moderation").regexes:
+                del self.bot.get_cog("Moderation").regexes[ctx.guild.id]
+
+    @word_flag_list.command("remove")
+    async def word_flag_list_remove(self, ctx, *, word: str):
+        censor_list = Configuration.get_var(ctx.guild.id, "FLAGGING", "WORD_LIST")
+        if word.lower() not in censor_list:
+            await MessageUtils.send_to(ctx, "NO", "not_flagged", word=word)
+        else:
+            censor_list.remove(word.lower())
+            await MessageUtils.send_to(ctx, "YES", "flag_removed", entry=word)
+            Configuration.save(ctx.guild.id)
+            if ctx.guild.id in self.bot.get_cog("Moderation").regexes:
+                del self.bot.get_cog("Moderation").regexes[ctx.guild.id]
 
 
     @configure.group()
@@ -1183,8 +1284,8 @@ class ServerAdmin(BaseCog):
     @configure.group()
     async def custom_commands_channel_list(self, ctx):
         """custom_commands_channel_list_help"""
-        if ctx.invoked_subcommand == self.custom_commands_channel_list:
-            pass
+        if ctx.invoked_subcommand is None:
+            await ctx.invoke(self.bot.get_command("help"), query="configure custom_commands_channel_list")
 
     @custom_commands_channel_list.command("add")
     async def custom_commands_ignored_channels_add(self, ctx, channel:TextChannel):
@@ -1194,7 +1295,7 @@ class ServerAdmin(BaseCog):
             await MessageUtils.send_to(ctx, 'NO', f'custom_commands_channel_already_on_{mode}_list')
         else:
             channels.append(channel.id)
-            await MessageUtils.send_to(ctx, 'YES', f'custom_ccensortrustedbypassommands_channel_added_{mode}', channel=channel.mention)
+            await MessageUtils.send_to(ctx, 'YES', f'custom_commands_channel_added_{mode}', channel=channel.mention)
             Configuration.save(ctx.guild.id)
 
     @custom_commands_channel_list.command("remove")
@@ -1210,8 +1311,8 @@ class ServerAdmin(BaseCog):
 
     @custom_commands_channel_list.command("mode")
     async def custom_commands_channel_list_mode(self, ctx, mode:ListMode):
-        Configuration.set_var(ctx.guild.id, "CUSTOM_COMMANDS", "CHANNELS_IGNORED", mode)
-        mode = "ignore" if mode else "use"
+        Configuration.set_var(ctx.guild.id, "CUSTOM_COMMANDS", "CHANNELS_IGNORED", not mode)
+        mode = "use" if mode else "ignore"
         await MessageUtils.send_to(ctx, "YES", f"custom_commands_channel_list_mode_{mode}")
 
     @custom_commands_role_list.command("mode")

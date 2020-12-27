@@ -29,6 +29,7 @@ class Basic(BaseCog):
         self.running = False
 
     @commands.command()
+    @commands.bot_has_permissions(embed_links=True)
     async def about(self, ctx):
         """about_help"""
         uptime = datetime.utcnow() - self.bot.start_time
@@ -72,11 +73,10 @@ class Basic(BaseCog):
     async def quote(self, ctx: commands.Context, *, message:Message):
         """quote_help"""
         await ctx.trigger_typing()
-        member = message.guild.get_member(ctx.author.id)
-        if member is None:
+        if ctx.message.author is None:
             await MessageUtils.send_to(ctx, 'NO', 'quote_not_visible_to_user')
         else:
-            permissions = message.channel.permissions_for(member)
+            permissions = message.channel.permissions_for(ctx.message.author)
             if permissions.read_message_history and permissions.read_message_history:
                 if message.channel.is_nsfw() and not ctx.channel.is_nsfw():
                     await MessageUtils.send_to(ctx, 'NO', 'quote_nsfw_refused')
@@ -141,7 +141,7 @@ class Basic(BaseCog):
 
 
     @commands.command(aliases=["selfrole", "self_roles", "selfroles"])
-    @commands.bot_has_permissions(embed_links=True)
+    @commands.bot_has_permissions(embed_links=True, external_emojis=True, add_reactions=True)
     @commands.guild_only()
     async def self_role(self, ctx: commands.Context, *, role: str = None):
         """role_help"""
@@ -158,10 +158,10 @@ class Basic(BaseCog):
                     try:
                         if role in ctx.author.roles:
                             await ctx.author.remove_roles(role)
-                            await ctx.send(Translator.translate("role_left", ctx, role_name=role.name))
+                            await MessageUtils.send_to(ctx.channel, "YES", "role_left", role_name=await Utils.clean(role.name), user=ctx.author.name)
                         else:
                             await ctx.author.add_roles(role)
-                            await ctx.send(Translator.translate("role_joined", ctx, role_name=role.name))
+                            await MessageUtils.send_to(ctx.channel, "YES", "role_joined", role_name=await Utils.clean(role.name), user=ctx.author.name)
                     except discord.Forbidden:
                         await ctx.send(
                             f"{Emoji.get_chat_emoji('NO')} {Translator.translate('role_too_high_add', ctx, role=role.name)}")
@@ -170,8 +170,13 @@ class Basic(BaseCog):
 
 
     @commands.command()
+    @commands.bot_has_permissions(external_emojis=True, add_reactions=True)
     async def help(self, ctx, *, query: str = None):
         """help_help"""
+        if query is not None and len(query) > 100:
+            return #bye bye spammers
+        if query is not None:
+            query = ''.join(query.splitlines())
         data = {
             "trigger": ctx.message.id
         }
