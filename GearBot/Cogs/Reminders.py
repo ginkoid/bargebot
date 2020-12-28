@@ -1,6 +1,7 @@
 import asyncio
 import time
 from datetime import datetime
+from tortoise.query_utils import Q
 
 from discord import Embed, User, NotFound, Forbidden, DMChannel
 from discord.ext import commands
@@ -8,7 +9,7 @@ from discord.ext import commands
 from Bot import TheRealGearBot
 from Cogs.BaseCog import BaseCog
 from Util import Utils, GearbotLogging, Emoji, Translator, MessageUtils, server_info
-from Util.Converters import Duration, ReminderText
+from Util.Converters import Duration, DurationHolder, ReminderText
 from database.DatabaseConnector import Reminder
 
 
@@ -84,6 +85,35 @@ class Reminders(BaseCog):
         await MessageUtils.send_to(ctx, "YES", f"reminder_confirmation_{mode}", duration=duration.length,
                                      duration_identifier=duration.unit)
 
+    @remind.command(aliases=["s"])
+    async def snooze(self, ctx, duration: Duration = DurationHolder(5, 'm')):
+        """remind_snooze_help"""
+        duration_seconds = duration.to_seconds(ctx)
+        if duration_seconds <= 0:
+            await MessageUtils.send_to(ctx, "NO", "reminder_time_travel")
+            return
+        if isinstance(ctx.channel, DMChannel):
+            target_criteria = Q(dm=1, status=2) | Q(dm=0, status=4)
+        else:
+            target_criteria = Q(channel_id=ctx.channel.id) & (Q(dm=0, status=2) | Q(dm=1, status=4))
+        target_reminder = await Reminder.get_or_none(Q(user_id=ctx.author.id, status__in=[2, 4]) & target_criteria).order_by('-time').limit(1)
+        if target_reminder is None:
+            await MessageUtils.send_to(ctx, "NO", "reminder_not_found")
+            return
+        new_reminder = target_reminder.clone()
+        new_reminder._custom_generated_pk = False
+        new_reminder.status = 1
+        new_reminder.send = datetime.now().timestamp()
+        new_reminder.time = time.time() + duration_seconds
+        await new_reminder.save()
+        if duration_seconds <= 10:
+            self.handling.add(new_reminder.id)
+            self.bot.loop.create_task(
+                self.run_after(duration_seconds, self.deliver(new_reminder)))
+        mode = "dm" if new_reminder.dm else "here"
+        await MessageUtils.send_to(ctx, "YES", f"reminder_confirmation_{mode}", duration=duration.length,
+                                     duration_identifier=duration.unit)
+
     async def delivery_service(self):
         GearbotLogging.info("Starting reminder delivery background task")
         while self.running:
@@ -114,9 +144,13 @@ class Reminders(BaseCog):
         first = dm if r.dm else channel
         alternative = channel if r.dm else dm
 
-        if not await self.attempt_delivery(first, r):
-            await self.attempt_delivery(alternative, r)
-        await r.delete()
+        if await self.attempt_delivery(first, r):
+            r.status = 2
+        elif await self.attempt_delivery(alternative, r):
+            r.status = 4
+        else:
+            r.status = 3
+        await r.save()
 
     async def attempt_delivery(self, location, package):
         try:
