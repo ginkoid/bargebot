@@ -5,7 +5,7 @@ from Util import Configuration, Pages, Translator, ReactionManager, Emoji
 
 def validate_self_roles(bot, guild):
     roles = Configuration.get_var(guild.id, "ROLES", "SELF_ROLES")
-    to_remove = set(role for role in roles if guild.get_role(role) is None)
+    to_remove = {role for role in roles if guild.get_role(role) is None}
     if len(to_remove) > 0:
         Configuration.set_var(guild.id, "ROLES", "SELF_ROLES", set(roles) - to_remove)
         bot.dispatch("self_roles_update", guild.id)

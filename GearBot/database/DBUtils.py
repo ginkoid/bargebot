@@ -15,7 +15,7 @@ previous_list = set()
 last_flush = datetime.now()
 fakeLoggedMessage = namedtuple("BufferedMessage", "messageid content author channel server type pinned attachments")
 
-violation_regex = re.compile("\(1062, \"Duplicate entry '(\d+)' for key 'PRIMARY'.*")
+violation_regex = re.compile(r"\(1062, \"Duplicate entry '(\d+)' for key 'PRIMARY'.*")
 
 async def insert_message(message):
     if message.id not in recent_list and message.id not in previous_list:
@@ -29,7 +29,7 @@ async def insert_message(message):
                               author=message.author.id,
                               channel=message.channel.id, server=message.guild.id,
                               type=message_type, pinned=message.pinned, attachments=[LoggedAttachment(id=a.id, name=a.filename,
-                                                                                           isImage=(a.width is not None or a.width is 0),
+                                                                                           isImage=(a.width is not None or a.width == 0),
                                                                                            message_id=message.id) for a in message.attachments])
         batch[message.id] = m
 

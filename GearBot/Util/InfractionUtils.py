@@ -81,7 +81,7 @@ async def fetch_infraction_pages(guild_id, query, amount, fields, requested):
     bot.loop.create_task(update_pages(guild_id, query, fields, amount, pages, requested, longest_id, longest_type, longest_timestamp, header))
     return len(pages)
 
-ID_MATCHER = re.compile("<@!?([0-9]+\s*)>")
+ID_MATCHER = re.compile(r"<@!?([0-9]+\s*)>")
 
 async def update_pages(guild_id, query, fields, amount, pages, start, longest_id, longest_type, longest_timestamp, header):
     key = get_key(guild_id, query, fields, amount)
@@ -157,7 +157,7 @@ async def inf_update(message, query, fields, amount, page_num):
     key = get_key(guild_id, query, fields, amount)
     # do we have pages?
     count = await bot.redis_pool.llen(key)
-    if count is 0:
+    if count == 0:
         count = await fetch_infraction_pages(guild_id, query, amount, fields, page_num)
         if page_num >= count:
             page_num = 0

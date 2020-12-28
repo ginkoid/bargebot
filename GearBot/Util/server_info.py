@@ -91,7 +91,7 @@ def server_info_raw(bot, guild):
             r.id: {
                 "id": str(r.id),
                 "name": r.name,
-                "color": '#{:0>6x}'.format(r.color.value),
+                "color": f'#{r.color.value:0>6x}',
                 "members": len(r.members),
                 "is_admin": r.permissions.administrator,
                 "is_mod": r.permissions.ban_members,

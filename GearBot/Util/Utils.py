@@ -234,7 +234,7 @@ def chunks(l, n):
 def get_commit():
     commit = 'dev'
     try:
-        with open('version', 'r') as f:
+        with open('version') as f:
             commit = f.read().strip()
     except:
         pass

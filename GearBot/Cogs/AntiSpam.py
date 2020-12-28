@@ -48,7 +48,7 @@ emoji_list = sorted(emoji.UNICODE_EMOJI.keys(), reverse=True)
 class AntiSpam(BaseCog):
 
     def __init__(self, bot):
-        super(AntiSpam, self).__init__(bot)
+        super().__init__(bot)
         # store values as functions so only what is needed is computed
         self.generators = {
             "max_messages": lambda m: 1,
@@ -146,7 +146,7 @@ class AntiSpam(BaseCog):
                 elif t in self.generators:
                     v = self.generators[t](message)
                     cache[t] = v
-                if v is not 0:
+                if v != 0:
                     await check_bucket(f"{t}:{counter}", Translator.translate(f"spam_{t}", message), v, bucket)
 
     async def check_duplicates(self, message: Message, count: int, bucket):
@@ -349,7 +349,7 @@ class AntiSpam(BaseCog):
     @staticmethod
     def _get_mute_role(guild):
         role_id = Configuration.get_var(guild.id, "ROLES", "MUTE_ROLE")
-        if role_id is 0:
+        if role_id == 0:
             return None
         role = guild.get_role(role_id)
         return role

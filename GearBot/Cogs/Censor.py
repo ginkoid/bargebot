@@ -65,7 +65,7 @@ class Censor(BaseCog):
         content = content.replace('\\', '')
         decoded_content = parse.unquote(content)
 
-        if len(guilds) is not 0:
+        if len(guilds) != 0:
             codes = INVITE_MATCHER.findall(decoded_content)
             for code in codes:
                 try:
@@ -139,7 +139,7 @@ class Censor(BaseCog):
             clean_message = await Utils.clean(content, channel.guild, markdown=False)
             GearbotLogging.log_key(channel.guild.id, f'censored_message_failed{key}', user=member,
                                    user_id=member.id, message=clean_message, sequence=bad,
-                                   link='https://discord.com/channels/{0}/{1}/{2}'.format(channel.guild.id, channel.id, message_id))
+                                   link=f'https://discord.com/channels/{channel.guild.id}/{channel.id}/{message_id}')
 
     async def censor_invite(self, member, message_id, channel, code, server_name, content):
         # Allow for users with a trusted role, or trusted users, to post invite links

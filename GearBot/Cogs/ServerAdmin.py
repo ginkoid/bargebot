@@ -12,7 +12,7 @@ from Util import Configuration, Permissioncheckers, Emoji, Translator, Features,
 from Util.Converters import LoggingChannel, ListMode
 
 
-class ServerHolder(object):
+class ServerHolder:
     sid = None
     name = None
 
@@ -616,7 +616,7 @@ class ServerAdmin(BaseCog):
             await ctx.send(message, embed=embed)
             empty = []
             for cid, info in channels.items():
-                if len(info) is 0:
+                if len(info) == 0:
                     empty.append(cid)
             for e in empty:
                 del channels[e]

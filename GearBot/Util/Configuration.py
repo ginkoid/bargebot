@@ -10,14 +10,14 @@ TEMPLATE = dict()
 def save_master():
     global MASTER_CONFIG
     with open('config/master.json', 'w') as jsonfile:
-        jsonfile.write((json.dumps(MASTER_CONFIG, indent=4, skipkeys=True, sort_keys=True)))
+        jsonfile.write(json.dumps(MASTER_CONFIG, indent=4, skipkeys=True, sort_keys=True))
 
 
 # Ugly but this prevents import loop errors
 def load_master():
     global MASTER_CONFIG, MASTER_LOADED
     try:
-        with open('config/master.json', 'r') as jsonfile:
+        with open('config/master.json') as jsonfile:
             MASTER_CONFIG = json.load(jsonfile)
             if "Serveradmin" in MASTER_CONFIG["COGS"]:
                 MASTER_CONFIG["COGS"].remove("Serveradmin")
@@ -63,7 +63,7 @@ def initial_migration(config):
 
     for key, settings in keys.items():
         cid = config[key]
-        if cid is not 0:
+        if cid != 0:
             found = False
             for channel, info in config["LOG_CHANNELS"].items():
                 if cid == channel:
@@ -227,7 +227,7 @@ def v13(config):
 
 
 def v14(config):
-    if len(config["ANTI_SPAM"]) is 0:
+    if len(config["ANTI_SPAM"]) == 0:
         config["ANTI_SPAM"] = {
             "ENABLED": False,
             "BUCKETS": [],
@@ -400,7 +400,7 @@ def load_config(guild):
         if "VERSION" not in config:
             config["VERSION"] = 0
         SERVER_CONFIGS[guild] = update_config(guild, config)
-    if len(config.keys()) is 0:
+    if len(config.keys()) == 0:
         GearbotLogging.info(f"No config available for {guild}, creating a blank one.")
         SERVER_CONFIGS[guild] = Utils.fetch_from_disk("GearBot/template")
         save(guild)
@@ -475,7 +475,7 @@ def set_cat(id, cat, value):
 def save(id):
     global SERVER_CONFIGS
     with open(f'config/{id}.json', 'w') as jsonfile:
-        jsonfile.write((json.dumps(SERVER_CONFIGS[id], indent=4, skipkeys=True, sort_keys=True)))
+        jsonfile.write(json.dumps(SERVER_CONFIGS[id], indent=4, skipkeys=True, sort_keys=True))
     Features.check_server(id)
 
 

@@ -80,7 +80,7 @@ class Moderation(BaseCog):
     async def seen(self, ctx, user: discord.Member):
         """seen_help"""
         messages = await LoggedMessage.filter(author=user.id, server=ctx.guild.id).order_by("-messageid").limit(1).prefetch_related("attachments")
-        if len(messages) is 0:
+        if len(messages) == 0:
             await MessageUtils.send_to(ctx, "SPY", "seen_fail", user_id=user.id, user=Utils.clean_user(user))
         else:
             await MessageUtils.send_to(ctx, "EYES", "seen_success", user_id=user.id, user=Utils.clean_user(user), date=Object(messages[0].messageid).created_at)
@@ -165,7 +165,7 @@ class Moderation(BaseCog):
         except BadArgument:
             role_search = role.lower().replace(" ", "")
             roles = [r for r in ctx.guild.roles if role_search in r.name.lower().replace(" ", "")]
-            if len(roles) is 1:
+            if len(roles) == 1:
                 drole = roles[0]
             elif len(roles) > 1:
                 await MessageUtils.send_to(ctx, "NO", "role_too_many_matches", name=role.replace("@", "@\u200b"))
@@ -665,7 +665,7 @@ class Moderation(BaseCog):
         if reason == "":
             reason = Translator.translate("no_reason", ctx.guild.id)
         roleid = Configuration.get_var(ctx.guild.id, "ROLES", "MUTE_ROLE")
-        if roleid is 0:
+        if roleid == 0:
             await ctx.send(
                 f"{Emoji.get_chat_emoji('WARNING')} {Translator.translate('mute_not_configured', ctx.guild.id, user=target.mention)}")
         else:
@@ -825,7 +825,7 @@ class Moderation(BaseCog):
         if reason == "":
             reason = Translator.translate("no_reason", ctx.guild.id)
         roleid = Configuration.get_var(ctx.guild.id, "ROLES", "MUTE_ROLE")
-        if roleid is 0:
+        if roleid == 0:
             if confirm:
                 await MessageUtils.send_to(ctx, 'NO', 'unmute_fail_disabled')
             else:
@@ -999,7 +999,7 @@ class Moderation(BaseCog):
     @commands.bot_has_permissions(manage_messages=True)
     async def clean_user(self, ctx, users: Greedy[DiscordUser], amount: RangedInt(1) = 50):
         """clean_user_help"""
-        if len(users) is 0:
+        if len(users) == 0:
             await MessageUtils.send_to(ctx, 'NO', 'clean_missing_targets')
         await self._clean(ctx, amount, lambda m: any(m.author.id == user.id for user in users))
 
@@ -1048,7 +1048,7 @@ class Moderation(BaseCog):
     @commands.bot_has_permissions(manage_messages=True)
     async def clean_everywhere(self, ctx, users: Greedy[DiscordUser], amount: RangedInt(1) = 50):
         """clean_everywhere_help"""
-        if len(users) is 0:
+        if len(users) == 0:
             await MessageUtils.send_to(ctx, 'NO', 'clean_missing_targets')
         total = 0
         if any(channel.id in self.bot.being_cleaned for channel in ctx.guild.text_channels):
@@ -1120,7 +1120,7 @@ class Moderation(BaseCog):
         await asyncio.sleep(5)
         guild: discord.Guild = channel.guild
         roleid = Configuration.get_var(guild.id, "ROLES", "MUTE_ROLE")
-        if roleid is not 0:
+        if roleid != 0:
             role = guild.get_role(roleid)
             if role is not None and channel.permissions_for(guild.me).manage_channels:
                 if isinstance(channel, discord.TextChannel):
@@ -1143,7 +1143,7 @@ class Moderation(BaseCog):
         i = await Infraction.get_or_none(type = "Mute", active = True, end__gt=now, guild_id = member.guild.id, user_id = member.id)
         if i is not None:
             roleid = Configuration.get_var(member.guild.id, "ROLES", "MUTE_ROLE")
-            if roleid is not 0:
+            if roleid != 0:
                 role = member.guild.get_role(roleid)
                 if role is not None:
                     if member.guild.me.guild_permissions.manage_roles:

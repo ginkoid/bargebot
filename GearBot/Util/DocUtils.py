@@ -3,7 +3,7 @@ import re
 
 from Util import Configuration, Pages, GearbotLogging, Permissioncheckers, Translator
 
-image_pattern = re.compile("(?:!\[)([A-z ]+)(?:\]\()(?:\.*/*)(.*)(?:\))(.*)")
+image_pattern = re.compile(r"(?:!\[)([A-z ]+)(?:\]\()(?:\.*/*)(.*)(?:\))(.*)")
 
 async def send_buffer(channel, buffer):
     pages = Pages.paginate(buffer, max_lines=500)

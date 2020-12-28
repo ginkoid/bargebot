@@ -21,7 +21,7 @@ async def get_message_data(bot, message_id):
     message = None
     if is_cache_enabled(bot) and not Object(message_id).created_at <= datetime.utcfromtimestamp(time.time() - 5 * 60):
         parts = await bot.redis_pool.hgetall(f"messages:{message_id}")
-        if len(parts) is 6:
+        if len(parts) == 6:
             message = Message(message_id, int(parts["author"]), parts["content"], int(parts["channel"]), int(parts["server"]), [attachment(a.split("/")[0], a.split("/")[1]) for a in parts["attachments"].split("|")] if len(parts["attachments"]) > 0 else [], type=int(parts["type"]) if "type" in parts else None, pinned=parts["pinned"] == '1')
     if message is None:
         message = await LoggedMessage.get_or_none(messageid = message_id).prefetch_related("attachments")
@@ -37,7 +37,7 @@ async def insert_message(bot, message, redis=True):
     if redis and is_cache_enabled(bot):
         pipe = bot.redis_pool.pipeline()
         pipe.hmset_dict(f"messages:{message.id}", author=message.author.id, content=message.content,
-                         channel=message.channel.id, server=message.guild.id, pinned=1 if message.pinned else 0, attachments='|'.join((f"{str(a.id)}/{str(a.filename)}" for a in message.attachments)))
+                         channel=message.channel.id, server=message.guild.id, pinned=1 if message.pinned else 0, attachments='|'.join(f"{str(a.id)}/{str(a.filename)}" for a in message.attachments))
         if message_type is not None:
             pipe.hmset_dict(f"messages:{message.id}", type=message_type)
         pipe.expire(f"messages:{message.id}", 5*60+2)
