@@ -16,7 +16,7 @@ from discord.abc import PrivateChannel
 from discord.ext import commands
 
 from Util import Configuration, GearbotLogging, Emoji, Pages, Utils, Translator, InfractionUtils, MessageUtils, \
-    server_info
+    ServerInfo
 from Util.Permissioncheckers import NotCachedException
 from Util.Utils import to_pretty_time
 from database import DatabaseConnector, DBUtils
@@ -139,6 +139,7 @@ async def fill_cache(bot):
             start_time = time.time()
             old = len(bot.missing_guilds)
             while len(bot.missing_guilds) > 0:
+                tasks = []
                 try:
                     tasks = [asyncio.create_task(cache_guild(bot, guild_id)) for guild_id in bot.missing_guilds]
                     await asyncio.wait_for(asyncio.gather(*tasks), 600)
@@ -190,65 +191,46 @@ async def on_message(bot, message:Message):
     ctx: commands.Context = await bot.get_context(message)
     bot.user_messages += 1
     if ctx.valid and ctx.command is not None:
-        bot.commandCount = bot.commandCount + 1
+        bot.commandCount += 1
         if isinstance(ctx.channel, TextChannel) and not ctx.channel.permissions_for(ctx.channel.guild.me).send_messages:
             try:
                 await ctx.author.send("Hey, you tried triggering a command in a channel I'm not allowed to send messages in. Please grant me permissions to reply and try again.")
             except Forbidden:
                 pass  # closed DMs
-        elif ctx.author.id in Configuration.get_persistent_var("user_blocklist", []):
-            try:
-                await MessageUtils.send_to(ctx, "BAD_USER", "You have been globally blocked from using this bot due to abuse", translate=False)
-            except Forbidden:
-                pass  # closed DMs
-        else:
-            f = time.perf_counter_ns if hasattr(time, "perf_counter_ns") else time.perf_counter
-            start = f()
-            await bot.invoke(ctx)
+            return
+        if ctx.author.id in Configuration.get_persistent_var("user_blocklist", []):
+            return
+        await bot.invoke(ctx)
 
 
 async def on_guild_join(bot, guild: Guild):
     blocked = Configuration.get_persistent_var("server_blocklist", [])
     if guild.id in blocked:
-        GearbotLogging.info(f"Someone tried to add me to blocked guild {guild.name} ({guild.id})")
-        try:
-            await guild.owner.send("Someone tried adding me to {guild.name} (``{guild.id}``) but the server has been blocked")
-        except Exception:
-            pass
         await guild.leave()
+        await GearbotLogging.bot_log(f"Someone tried to add me to blocked guild {await Utils.clean(guild.name)} ({guild.id})")
     elif guild.owner_id in Configuration.get_persistent_var("user_blocklist", []):
-        GearbotLogging.info(f"Someone tried to add me to {guild.name} ({guild.id}) but the owner ({guild.owner} ({guild.owner_id})) is blocked")
-        try:
-            await (await bot.fetch_user(guild.owner_id)).send(f"Someone tried adding me to {guild.name} (``{guild.id}``) but you have been blocked due to bot abuse, so i left")
-        except Exception:
-            pass
         await guild.leave()
+        await GearbotLogging.bot_log(f"Someone tried to add me to {await Utils.clean(guild.name)} ({guild.id}) but the owner {guild.owner_id} is blocked")
     else:
         bot.missing_guilds.add(guild.id)
         await guild.chunk(cache=True)
         bot.missing_guilds.remove(guild.id)
         GearbotLogging.info(f"A new guild came up: {guild.name} ({guild.id}).")
         Configuration.load_config(guild.id)
-        name = await Utils.clean(guild.name)
-        await GearbotLogging.bot_log(f"{Emoji.get_chat_emoji('JOIN')} A new guild came up: {name} ({guild.id}).", embed=server_info.server_info_embed(guild))
+        await GearbotLogging.bot_log(f"{Emoji.get_chat_emoji('JOIN')} A new guild came up: {await Utils.clean(guild.name)} ({guild.id}).", embed=ServerInfo.server_info_embed(guild))
 
 async def on_guild_remove(guild):
     blocked = Configuration.get_persistent_var("server_blocklist", [])
     blocked_users = Configuration.get_persistent_var("user_blocklist", [])
     if guild.id not in blocked and guild.owner_id not in blocked_users:
         GearbotLogging.info(f"I was removed from a guild: {guild.name} ({guild.id}).")
-        await GearbotLogging.bot_log(f"{Emoji.get_chat_emoji('LEAVE')} I was removed from a guild: {guild.name} ({guild.id}).", embed=server_info.server_info_embed(guild))
+        await GearbotLogging.bot_log(f"{Emoji.get_chat_emoji('LEAVE')} I was removed from a guild: {await Utils.clean(guild.name)} ({guild.id}).", embed=ServerInfo.server_info_embed(guild))
 
 
 async def on_guild_update(before, after):
     if after.owner is not None and after.owner_id in Configuration.get_persistent_var("user_blocklist", []):
-        GearbotLogging.info(
-            f"Someone transferred {after.name} ({after.id}) to ({after.owner} ({after.owner_id})) but they are blocked")
-        try:
-            await after.owner.send(f"Someone transferred {after.name} (``{after.id}``) to you, but you have been blocked due to bot abuse, so i left")
-        except Exception:
-            pass
         await after.leave()
+        await GearbotLogging.bot_log(f"Someone transferred {await Utils.clean(after.name)} ({after.id}) to {after.owner_id} but they are blocked")
 
 class PostParseError(commands.BadArgument):
 

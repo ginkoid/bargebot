@@ -16,13 +16,11 @@ class Admin(BaseCog):
 
     @commands.command()
     async def setstatus(self, ctx, type:int, *, status:str):
-        """Sets a playing/streaming/listening/watching status"""
         await self.bot.change_presence(activity=discord.Activity(name=status, type=type))
         await ctx.send("Status updated")
 
     @commands.command()
     async def reloadconfigs(self, ctx:commands.Context):
-        """Reloads all server configs from disk"""
         async with ctx.typing():
             Configuration.load_master()
             await Configuration.initialize(self.bot)

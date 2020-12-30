@@ -16,20 +16,13 @@ def save_master():
 # Ugly but this prevents import loop errors
 def load_master():
     global MASTER_CONFIG, MASTER_LOADED
-    try:
-        with open('config/master.json') as jsonfile:
-            MASTER_CONFIG = json.load(jsonfile)
-            if "Serveradmin" in MASTER_CONFIG["COGS"]:
-                MASTER_CONFIG["COGS"].remove("Serveradmin")
-                MASTER_CONFIG["COGS"].append("ServerAdmin")
-                save_master()
-            MASTER_LOADED = True
-    except FileNotFoundError:
-        GearbotLogging.error("Unable to load config, running with defaults.")
-    except Exception as e:
-        GearbotLogging.error("Failed to parse configuration.")
-        print(e)
-        raise e
+    with open('config/master.json') as jsonfile:
+        MASTER_CONFIG = json.load(jsonfile)
+        if "Serveradmin" in MASTER_CONFIG["COGS"]:
+            MASTER_CONFIG["COGS"].remove("Serveradmin")
+            MASTER_CONFIG["COGS"].append("ServerAdmin")
+            save_master()
+        MASTER_LOADED = True
 
 
 def get_master_var(key, default=None):

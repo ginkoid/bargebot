@@ -1,4 +1,5 @@
 import discord
+from discord import Embed
 from discord.ext import commands
 
 from Cogs.BaseCog import BaseCog
@@ -139,6 +140,8 @@ class CustCommands(BaseCog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot or message.webhook_id is not None:
+            return
+        if message.author.id in Configuration.get_persistent_var("user_blocklist", []):
             return
         if not hasattr(message.channel, "guild") or message.channel.guild is None:
             return

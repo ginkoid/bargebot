@@ -6,7 +6,7 @@ COPY requirements.txt .
 RUN apt update && apt install build-essential git -y && pip install -r requirements.txt
 
 COPY . .
-RUN git rev-parse HEAD > /app/version
+RUN git rev-parse HEAD > version
 
 FROM python:3.9.0-slim-buster AS run
 

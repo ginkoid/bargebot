@@ -8,11 +8,9 @@ from discord.ext import commands
 
 from Bot import TheRealGearBot
 from Cogs.BaseCog import BaseCog
-from Util import Utils, GearbotLogging, Emoji, Translator, MessageUtils, server_info
+from Util import Utils, GearbotLogging, Emoji, Translator, MessageUtils, ServerInfo
 from Util.Converters import Duration, DurationHolder, ReminderText
-from database.DatabaseConnector import Reminder
-
-
+from database.DatabaseConnector import Reminder, ReminderStatus
 class Reminders(BaseCog):
 
     def __init__(self, bot) -> None:
@@ -75,7 +73,7 @@ class Reminders(BaseCog):
             dm = True
         r = await Reminder.create(user_id=ctx.author.id, channel_id=ctx.channel.id, dm=dm,
                         to_remind=await Utils.clean(reminder, markdown=False, links=False, emoji=False),
-                        time=time.time() + duration_seconds, send=datetime.now().timestamp(), status=1,
+                        time=time.time() + duration_seconds, send=datetime.now().timestamp(), status=ReminderStatus.Pending,
                         guild_id=ctx.guild.id if ctx.guild is not None else "@me", message_id=ctx.message.id)
         if duration_seconds <= 10:
             self.handling.add(r.id)
@@ -93,16 +91,16 @@ class Reminders(BaseCog):
             await MessageUtils.send_to(ctx, "NO", "reminder_time_travel")
             return
         if isinstance(ctx.channel, DMChannel):
-            target_criteria = Q(dm=1, status=2) | Q(dm=0, status=4)
+            target_criteria = Q(dm=1, status=ReminderStatus.DeliveredFirst) | Q(dm=0, status=ReminderStatus.DeliveredAlternative)
         else:
-            target_criteria = Q(channel_id=ctx.channel.id) & (Q(dm=0, status=2) | Q(dm=1, status=4))
-        target_reminder = await Reminder.get_or_none(Q(user_id=ctx.author.id, status__in=[2, 4]) & target_criteria).order_by('-time').limit(1)
+            target_criteria = Q(channel_id=ctx.channel.id) & (Q(dm=0, status=ReminderStatus.DeliveredFirst) | Q(dm=1, status=ReminderStatus.DeliveredAlternative))
+        target_reminder = await Reminder.get_or_none(Q(user_id=ctx.author.id) & target_criteria).order_by('-time').limit(1)
         if target_reminder is None:
             await MessageUtils.send_to(ctx, "NO", "reminder_not_found")
             return
         new_reminder = target_reminder.clone()
         new_reminder._custom_generated_pk = False
-        new_reminder.status = 1
+        new_reminder.status = ReminderStatus.Pending
         new_reminder.send = datetime.now().timestamp()
         new_reminder.time = time.time() + duration_seconds
         await new_reminder.save()
@@ -120,7 +118,7 @@ class Reminders(BaseCog):
             now = time.time()
             limit = datetime.fromtimestamp(time.time() + 30).timestamp()
 
-            for r in await Reminder.filter(time__lt = limit, status = 1):
+            for r in await Reminder.filter(time__lt=limit, status=ReminderStatus.Pending):
                 if r.id not in self.handling:
                     self.handling.add(r.id)
                     self.bot.loop.create_task(
@@ -145,11 +143,11 @@ class Reminders(BaseCog):
         alternative = channel if r.dm else dm
 
         if await self.attempt_delivery(first, r):
-            r.status = 2
+            r.status = ReminderStatus.DeliveredFirst
         elif await self.attempt_delivery(alternative, r):
-            r.status = 4
+            r.status = ReminderStatus.DeliveredAlternative
         else:
-            r.status = 3
+            r.status = ReminderStatus.Failed
         await r.save()
 
     async def attempt_delivery(self, location, package):
@@ -165,7 +163,7 @@ class Reminders(BaseCog):
             send_time = datetime.utcfromtimestamp(package.send)
             parts = {
                 "date": send_time.strftime('%c'),
-                "timediff": server_info.time_difference(now, send_time, None if isinstance(location, User) or isinstance(location, DMChannel) else location.guild.id),
+                "timediff": ServerInfo.time_difference(now, send_time, None if isinstance(location, User) or isinstance(location, DMChannel) else location.guild.id),
                 "now_date": now.strftime('%c'),
                 "jump_link": jumplink_available,
                 "recipient": None if isinstance(location, User) else (await Utils.get_user(package.user_id)).mention

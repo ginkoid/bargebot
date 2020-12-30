@@ -232,13 +232,11 @@ def chunks(l, n):
         yield l[i:i+n]
 
 def get_commit():
-    commit = 'dev'
     try:
         with open('version') as f:
-            commit = f.read().strip()
-    except:
-        pass
-    return commit
+            return f.read().strip()
+    except FileNotFoundError:
+        return 'master'
 
 def to_pretty_time(seconds, guild_id):
     seconds = round(seconds)

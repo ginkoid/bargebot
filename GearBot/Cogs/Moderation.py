@@ -15,7 +15,7 @@ from tortoise.exceptions import MultipleObjectsReturned
 from Bot import TheRealGearBot
 from Cogs.BaseCog import BaseCog
 from Util import Configuration, Utils, GearbotLogging, Pages, InfractionUtils, Emoji, Translator, \
-    Archive, Confirmation, MessageUtils, Questions, server_info, Actions, Permissioncheckers
+    Archive, Confirmation, MessageUtils, Questions, ServerInfo, Actions, Permissioncheckers
 from Util.Actions import ActionFailed
 from Util.Converters import BannedMember, UserID, Reason, Duration, DiscordUser, PotentialID, RoleMode, Guild, \
     RangedInt, Message, RangedIntBan, VerificationLevel, Nickname
@@ -348,37 +348,35 @@ class Moderation(BaseCog):
         member = await Utils.get_member(self.bot, ctx.guild, user.id)
         if member is not None:
             allowed, message = Actions.can_act("ban", ctx, member)
-        else:
-            allowed = True
-        if allowed:
-            duration_seconds = duration.to_seconds(ctx)
-            if duration_seconds > 0:
-                name = Utils.clean_user(user)
-                if Configuration.get_var(ctx.guild.id, "INFRACTIONS", "DM_ON_TEMPBAN"):
-                    try:
-                        dur=f'{duration.length}{duration.unit}'
-                        await user.send(
-                            f"{Emoji.get_chat_emoji('BAN')} {Translator.translate('tempban_dm', ctx.guild.id, server=ctx.guild.name, duration=dur)}```{reason}```")
-                    except (discord.HTTPException, AttributeError):
-                        GearbotLogging.log_key(ctx.guild.id, 'tempban_could_not_dm', user=name,
-                                            userid=user.id)
+            if not allowed:
+                await MessageUtils.send_to(ctx, "NO", message, translate=False)
+                return
+        duration_seconds = duration.to_seconds(ctx)
+        if duration_seconds > 0:
+            name = Utils.clean_user(user)
+            if Configuration.get_var(ctx.guild.id, "INFRACTIONS", "DM_ON_TEMPBAN"):
+                try:
+                    dur=f'{duration.length}{duration.unit}'
+                    await user.send(
+                        f"{Emoji.get_chat_emoji('BAN')} {Translator.translate('tempban_dm', ctx.guild.id, server=ctx.guild.name, duration=dur)}```{reason}```")
+                except (discord.HTTPException, AttributeError):
+                    GearbotLogging.log_key(ctx.guild.id, 'tempban_could_not_dm', user=name,
+                                        userid=user.id)
 
-                self.bot.data["forced_exits"].add(f"{ctx.guild.id}-{user.id}")
-                await ctx.guild.ban(user, reason=Utils.trim_message(
-                    f"Moderator: {ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) Reason: {reason}", 500),
-                                    delete_message_days=0)
+            self.bot.data["forced_exits"].add(f"{ctx.guild.id}-{user.id}")
+            await ctx.guild.ban(user, reason=Utils.trim_message(
+                f"Moderator: {ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) Reason: {reason}", 500),
+                                delete_message_days=0)
 
 
-                until = time.time() + duration_seconds
-                i = await InfractionUtils.add_infraction(ctx.guild.id, user.id, ctx.author.id, "Tempban", reason, end=until)
-                GearbotLogging.log_key(ctx.guild.id, 'tempban_log', user=Utils.clean_user(user), user_id=user.id,
-                                       moderator=Utils.clean_user(ctx.author), moderator_id=ctx.author.id, reason=reason,
-                                       until=datetime.datetime.utcfromtimestamp(until), inf=i.id)
-                await MessageUtils.send_to(ctx, "YES", "tempban_confirmation", user=Utils.clean_user(user),
-                                             user_id=user.id, reason=reason,
-                                             until=datetime.datetime.utcfromtimestamp(until), inf=i.id)
-        else:
-            await MessageUtils.send_to(ctx, "NO", message, translate=False)
+            until = time.time() + duration_seconds
+            i = await InfractionUtils.add_infraction(ctx.guild.id, user.id, ctx.author.id, "Tempban", reason, end=until)
+            GearbotLogging.log_key(ctx.guild.id, 'tempban_log', user=Utils.clean_user(user), user_id=user.id,
+                                    moderator=Utils.clean_user(ctx.author), moderator_id=ctx.author.id, reason=reason,
+                                    until=datetime.datetime.utcfromtimestamp(until), inf=i.id)
+            await MessageUtils.send_to(ctx, "YES", "tempban_confirmation", user=Utils.clean_user(user),
+                                            user_id=user.id, reason=reason,
+                                            until=datetime.datetime.utcfromtimestamp(until), inf=i.id)
 
     async def _ban(self, ctx, user, reason, confirm, days=0, dm_action=True):
         self.bot.data["forced_exits"].add(f"{ctx.guild.id}-{user.id}")
@@ -926,7 +924,7 @@ class Moderation(BaseCog):
     @commands.bot_has_permissions(embed_links=True)
     async def serverinfo(self, ctx):
         """serverinfo_help"""
-        embed = server_info.server_info_embed(ctx.guild)
+        embed = ServerInfo.server_info_embed(ctx.guild)
         embed.set_footer(text=Translator.translate('requested_by', ctx, user=ctx.author),
                          icon_url=ctx.author.avatar_url)
         await ctx.send(embed=embed)

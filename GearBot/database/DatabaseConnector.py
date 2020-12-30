@@ -1,5 +1,6 @@
 from tortoise.models import Model
 from tortoise import fields, Tortoise
+from enum import IntEnum
 
 from Util import Configuration
 
@@ -35,6 +36,12 @@ class Infraction(Model):
     end = fields.BigIntField(null=True)
     active = fields.BooleanField(default=True)
 
+class ReminderStatus(IntEnum):
+    Pending = 1
+    DeliveredFirst = 2
+    Failed = 3
+    DeliveredAlternative = 4
+
 class Reminder(Model):
     id = fields.IntField(pk=True, generated=True)
     user_id = fields.BigIntField()
@@ -45,7 +52,7 @@ class Reminder(Model):
     to_remind = fields.CharField(max_length=1800, collation="utf8mb4_general_ci")
     send = fields.BigIntField(null=True)
     time = fields.BigIntField()
-    status = fields.IntField()
+    status = fields.IntEnumField(ReminderStatus)
 
 class Raid(Model):
     id = fields.IntField(pk=True, generated=True)
