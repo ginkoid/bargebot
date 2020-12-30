@@ -1309,7 +1309,7 @@ class ServerAdmin(BaseCog):
 
     @custom_commands_channel_list.command("mode")
     async def custom_commands_channel_list_mode(self, ctx, mode:ListMode):
-        Configuration.set_var(ctx.guild.id, "CUSTOM_COMMANDS", "CHANNELS_IGNORED", not mode)
+        Configuration.set_var(ctx.guild.id, "CUSTOM_COMMANDS", "CHANNELS_IGNORED", mode)
         mode = "use" if mode else "ignore"
         await MessageUtils.send_to(ctx, "YES", f"custom_commands_channel_list_mode_{mode}")
 
