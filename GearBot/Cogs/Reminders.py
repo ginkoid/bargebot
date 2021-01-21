@@ -23,7 +23,7 @@ class Reminders(BaseCog):
     def cog_unload(self):
         self.running = False
 
-    @commands.group(aliases=["r", "reminder"])
+    @commands.group(aliases=["r", "reminder", "reminders"])
     async def remind(self, ctx):
         """remind_help"""
         if ctx.invoked_subcommand is None:

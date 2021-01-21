@@ -838,7 +838,7 @@
   "munmute_confirmation": "Sucessfully unmuted {count} users",
   "mass_failures_unmute": "I was unable to unmute the following users: ({page_num}/{pages}):",
   "censor_emoji_messages_enabled": "Messages only containing emoji will now be censored",
-  "censor_emoji_messages_disbabled": "Messages only containing emoji will no longer be censored",
+  "censor_emoji_messages_disabled": "Messages only containing emoji will no longer be censored",
   "full_message_censor_list": "Full message censor list for {server} ({page_num}/{pages})",
   "custom_commands_current_role_allow_list": "Roles allowed to execute custom commands",
   "custom_commands_current_role_block_list": "Roles not allowed to execute custom commands",
