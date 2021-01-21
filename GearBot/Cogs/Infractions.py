@@ -93,7 +93,7 @@ class Infractions(BaseCog):
     @commands.group(aliases=["infraction", "infractions"])
     async def inf(self, ctx: commands.Context):
         """inf_help"""
-        if ctx.subcommand_passed is None:
+        if ctx.invoked_subcommand is None:
             await ctx.invoke(self.bot.get_command("help"), query="inf")
 
     @inf.command()

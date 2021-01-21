@@ -27,7 +27,7 @@ class Emoji(BaseCog):
     @commands.guild_only()
     async def emoji(self, ctx):
         """emoji_help"""
-        if ctx.subcommand_passed is None:
+        if ctx.invoked_subcommand is None:
             await ctx.invoke(self.bot.get_command("help"), query="emoji")
 
     @emoji.command("list")

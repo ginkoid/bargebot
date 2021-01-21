@@ -90,7 +90,7 @@ class Moderation(BaseCog):
     @commands.bot_has_permissions(manage_nicknames=True)
     async def nickname(self, ctx: commands.Context):
         """mod_nickname_help"""
-        if ctx.subcommand_passed is None:
+        if ctx.invoked_subcommand is None:
             await ctx.invoke(self.bot.get_command("help"), query="nickname")
 
     @nickname.command("add", aliases=["set", "update", "edit"])
@@ -156,7 +156,7 @@ class Moderation(BaseCog):
     @commands.bot_has_permissions(manage_roles=True)
     async def role(self, ctx: commands.Context):
         """mod_role_help"""
-        if ctx.subcommand_passed is None:
+        if ctx.invoked_subcommand is None:
             await ctx.invoke(self.bot.get_command("help"), query="role")
 
     async def role_handler(self, ctx, user, role, action):
