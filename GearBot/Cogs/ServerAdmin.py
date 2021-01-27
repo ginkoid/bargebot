@@ -481,21 +481,19 @@ class ServerAdmin(BaseCog):
     @lvl4.command(name="remove")
     async def remove_lvl4(self, ctx, command: str, person: discord.Member):
         command_object = self.bot.get_command(command)
-        if command_object is not None:
-            cog_name = command_object.cog_name
-            overrides = Configuration.get_var(ctx.guild.id, "PERM_OVERRIDES")
-            found = False
-            if cog_name in overrides:
-                lvl4_list = Permissioncheckers.get_perm_dict(command.split(" "), overrides[cog_name], strict=True)
-                if lvl4_list is not None and person.id in lvl4_list["people"]:
-                    found = True
-            if found:
-                lvl4_list["people"].remove(person.id)
-                await ctx.send(f"{Emoji.get_chat_emoji('YES')} {Translator.translate('lvl4_removed', ctx, member=person, command=command)}")
-                Configuration.save(ctx.guild.id)
-            else:
-                await ctx.send(
-                    f"{Emoji.get_chat_emoji('NO')} {Translator.translate('did_not_have_lvl4', ctx, member=person, command=command)}")
+        if command_object is None:
+            return
+        cog_name = command_object.cog_name
+        overrides = Configuration.get_var(ctx.guild.id, "PERM_OVERRIDES")
+        if cog_name not in overrides:
+            return
+        lvl4_list = Permissioncheckers.get_perm_dict(command.split(" "), overrides[cog_name], strict=True)
+        if lvl4_list is None or person.id not in lvl4_list["people"]:
+            await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('did_not_have_lvl4', ctx, member=person, command=command)}")
+            return
+        lvl4_list["people"].remove(person.id)
+        Configuration.save(ctx.guild.id)
+        await ctx.send(f"{Emoji.get_chat_emoji('YES')} {Translator.translate('lvl4_removed', ctx, member=person, command=command)}")
 
     @configure.group()
     @commands.guild_only()

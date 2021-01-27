@@ -311,29 +311,29 @@ class DurationHolder:
             self.unit = "seconds"
         unit = self.unit.lower()
         length = self.length
-        if len(unit) > 1 and unit[-1:] == 's':  # plural -> singular
+        if len(unit) > 1 and unit[-1] == 's':  # plural -> singular
             unit = unit[:-1]
         if unit == 'mo' or unit == 'month':
             length = length * 30
             unit = 'd'
-        if unit == 'w' or unit == 'week':
+        if unit == 'w' or unit == 'wk' or unit == 'week':
             length = length * 7
             unit = 'd'
         if unit == 'd' or unit == 'day':
             length = length * 24
             unit = 'h'
-        if unit == 'h' or unit == 'hour':
+        if unit == 'h' or unit == 'hr' or unit == 'hour':
             length = length * 60
             unit = 'm'
-        if unit == 'm' or unit == 'minute':
+        if unit == 'm' or unit == 'min' or unit == 'minute':
             length = length * 60
             unit = 's'
-        if unit != 's' and unit != 'second':
+        if unit != 's' and unit != 'sec' and unit != 'second':
             raise PostParseError('Duration', 'Not a valid duration identifier')
         if length > 60 * 60 * 24 * 365:
             raise PostParseError('Duration', Translator.translate('max_duration', ctx))
         else:
-            return length
+            return int(round(length))
 
     def __str__(self):
         if len(self.unit) == 1:
@@ -349,7 +349,7 @@ class Duration(Converter):
         if match is None:
             raise TranslatedBadArgument('NaN', ctx)
         group = match.group(1)
-        holder = DurationHolder(int(group))
+        holder = DurationHolder(float(group))
         if len(argument) > len(group):
             holder.unit = await DurationIdentifier().convert(ctx, argument[len(group):])
         return holder
@@ -360,7 +360,7 @@ class DurationIdentifier(Converter):
         if argument is None:
             argument = "seconds"
         if argument.lower() not in ["month", "months", "week", "weeks", "day", "days", "hour", "hours", "minute", "minutes", "second",
-                                    "seconds", "mo", "w", "d", "h", "m", "s"]:
+                                    "seconds", "mo", "w", "wk", "d", "h", "hr", "m", "min", "s", "sec"]:
             raise BadArgument("Invalid duration, valid identifiers: month(s), week(s), day(s), hour(s), minute(s), second(s)")
         return argument
 

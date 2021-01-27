@@ -872,7 +872,7 @@ class Moderation(BaseCog):
                     GearbotLogging.log_key(ctx.guild.id, 'unmute_modlog', user=Utils.clean_user(target), user_id=target.id, moderator=Utils.clean_user(ctx.author), moderator_id=ctx.author.id, reason=reason, inf=i.id)
 
 
-    @commands.command(aliases=["info"])
+    @commands.command(aliases=["user", "info"])
     @commands.bot_has_permissions(embed_links=True)
     async def userinfo(self, ctx: commands.Context, *, user: DiscordUser = None):
         """userinfo_help"""
@@ -880,7 +880,7 @@ class Moderation(BaseCog):
             user = member = ctx.author
         else:
             member = None if ctx.guild is None else await Utils.get_member(self.bot, ctx.guild, user.id)
-        embed = discord.Embed(color=member.top_role.color if member is not None else 0x00cea2, timestamp=ctx.message.created_at)
+        embed = discord.Embed(color=member.color if member is not None else 0x00cea2, timestamp=ctx.message.created_at)
         embed.set_thumbnail(url=user.avatar_url)
         embed.set_footer(text=Translator.translate('requested_by', ctx, user=ctx.author.name),
                          icon_url=ctx.author.avatar_url)
