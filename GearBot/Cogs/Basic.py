@@ -50,7 +50,6 @@ class Basic(BaseCog):
                               MessageUtils.assemble(ctx, 'STONE', 'about_commands', commandCount=self.bot.commandCount, custom_command_count=self.bot.custom_command_count) + "\n" +
                               MessageUtils.assemble(ctx, 'WOOD', 'about_guilds', guilds=len(self.bot.guilds)) + "\n" +
                               MessageUtils.assemble(ctx, 'INNOCENT', 'about_users', total=total, unique=unique) + "\n" +
-                              MessageUtils.assemble(ctx, 'ALTER', 'commit_hash', hash=self.bot.version) + "\n" +
                               "\n[bargebot](https://github.com/ginkoid/bargebot), a fork of [GearBot](https://github.com/gearbot/GearBot)")
 
         embed.set_footer(text=self.bot.user.name, icon_url=self.bot.user.avatar_url)

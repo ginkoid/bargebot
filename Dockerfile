@@ -1,12 +1,11 @@
 FROM python:3.9.0-slim-buster AS build
 
 WORKDIR /app
-COPY requirements.txt .
 
-RUN apt-get update && apt-get install build-essential git -y && pip install -r requirements.txt
+COPY requirements.txt .
+RUN apt-get update && apt-get install build-essential -y && pip install -r requirements.txt
 
 COPY . .
-RUN git rev-parse HEAD > version && rm -r .git
 
 FROM python:3.9.0-slim-buster
 

@@ -56,9 +56,5 @@ class Admin(BaseCog):
         await MessageUtils.send_to(ctx, "YES", f"{Utils.clean_user(user)} (``{user.id}``) has been added to the blocked users list", translate=False)
         await GearbotLogging.bot_log(f"{Utils.clean_user(user)} (``{user.id}``) has been added to the blocked users list by {Utils.clean_user(ctx.author)}")
 
-    @commands.command()
-    async def pendingchanges(self, ctx):
-        await ctx.send(f'<https://github.com/ginkoid/bargebot/compare/{self.bot.version}...master>')
-
 def setup(bot):
     bot.add_cog(Admin(bot))
