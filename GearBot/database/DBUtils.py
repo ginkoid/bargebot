@@ -87,3 +87,6 @@ def get_messages_for_channel(channel_id):
 
 def get_messages_for_user_in_guild(user_id, guild_id):
     return [message for message in batch.values() if message.server == guild_id and message.author == user_id]
+
+def get_message(message_id):
+    return batch.get(message_id)

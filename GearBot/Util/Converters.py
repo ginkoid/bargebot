@@ -116,21 +116,14 @@ class Guild(Converter):
 
 class Message(Converter):
 
-    def __init__(self, insert=False, local_only=False) -> None:
-        self.insert = insert
+    def __init__(self, local_only=False) -> None:
         self.local_only = local_only
 
     async def convert(self, ctx, argument):
-        async with ctx.typing():
-            message_id, channel_id = self.extract_ids(ctx, argument)
-            logged, message, = await self.fetch_messages(ctx, message_id, channel_id)
-            if message is None:
-                raise TranslatedBadArgument('unknown_message', ctx)
-            if logged is None and message is not None and self.insert:
-                logged =await DBUtils.insert_message(message)
-            if logged is not None and logged.content != message.content:
-                logged.content = message.content
-                await logged.save()
+        message_id, channel_id = self.extract_ids(ctx, argument)
+        message = await self.fetch_message(ctx, message_id, channel_id)
+        if message is None:
+            raise TranslatedBadArgument('unknown_message', ctx)
         if message.channel != ctx.channel and self.local_only:
             raise TranslatedBadArgument('message_wrong_channel', ctx)
         return message
@@ -170,38 +163,27 @@ class Message(Converter):
         return message_id, channel_id
 
     @staticmethod
-    async def fetch_messages(ctx, message_id, channel_id):
-        message = None
-        logged_message = await LoggedMessage.get_or_none(messageid=message_id).prefetch_related("attachments")
-        async with ctx.typing():
-            if logged_message is None:
-                if channel_id is None:
-                    for channel in ctx.guild.text_channels:
-                        try:
-                            permissions = channel.permissions_for(channel.guild.me)
-                            if permissions.read_messages and permissions.read_message_history:
-                                message = await channel.fetch_message(message_id)
-                                channel_id = channel.id
-                                break
-                        except (NotFound, Forbidden):
-                            pass
-                    if message is None:
-                        raise TranslatedBadArgument('message_missing_channel', ctx)
-            elif channel_id is None:
+    async def fetch_message(ctx, message_id, channel_id):
+        if channel_id is None:
+            logged_message = await LoggedMessage.get_or_none(messageid=message_id) or DBUtils.get_message(message_id)
+            if logged_message is not None:
                 channel_id = logged_message.channel
+
+        if channel_id is None:
+            channel = ctx.channel
+        else:
             channel = ctx.bot.get_channel(channel_id)
             if channel is None:
                 raise TranslatedBadArgument('unknown_channel', ctx)
-            elif message is None:
-                try:
-                    permissions = channel.permissions_for(channel.guild.me)
-                    if permissions.read_messages and permissions.read_message_history:
-                        message = await channel.fetch_message(message_id)
-                except (NotFound, Forbidden):
-                    raise TranslatedBadArgument('unknown_message', ctx)
 
-        return logged_message, message
-
+        permissions = channel.permissions_for(channel.guild.me)
+        if not permissions.read_messages or not permissions.read_message_history:
+            return
+        try:
+            return await channel.fetch_message(message_id)
+        except (NotFound, Forbidden):
+            if channel_id is None:
+                raise TranslatedBadArgument('message_missing_channel', ctx)
 
 class RangedInt(Converter):
 

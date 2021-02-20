@@ -71,11 +71,11 @@ class Basic(BaseCog):
     @commands.bot_has_permissions(embed_links=True)
     async def quote(self, ctx: commands.Context, *, message:Message):
         """quote_help"""
-        await ctx.trigger_typing()
         if ctx.message.author is None:
             await MessageUtils.send_to(ctx, 'NO', 'quote_not_visible_to_user')
         else:
-            permissions = message.channel.permissions_for(ctx.message.author)
+            member = await message.guild.fetch_member(ctx.message.author.id)
+            permissions = message.channel.permissions_for(member)
             if permissions.read_message_history and permissions.read_message_history:
                 if message.channel.is_nsfw() and not ctx.channel.is_nsfw():
                     await MessageUtils.send_to(ctx, 'NO', 'quote_nsfw_refused')
@@ -114,8 +114,6 @@ class Basic(BaseCog):
                                                   channel=message.channel.name,
                                                   user=Utils.clean_user(ctx.author), message_id=message.id))
                     await ctx.send(embed=embed)
-                    if ctx.channel.permissions_for(ctx.me).manage_messages:
-                        await ctx.message.delete()
 
             else:
                 await MessageUtils.send_to(ctx, 'NO', 'quote_not_visible_to_user')
