@@ -1,3 +1,4 @@
+import warnings
 from tortoise.models import Model
 from tortoise import fields, Tortoise
 from enum import IntEnum
@@ -94,4 +95,8 @@ async def init():
             }
         }
     )
-    await Tortoise.generate_schemas()
+    with warnings.catch_warnings(record=True):
+        await Tortoise.generate_schemas()
+
+async def close():
+    await Tortoise.close_connections()

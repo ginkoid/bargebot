@@ -15,7 +15,6 @@ class GearBot(AutoShardedBot):
     errors = 0
     eaten = 0
     database_errors = 0,
-    database_connection = None
     locked = True
     redis_pool = None
     aiosession = None
