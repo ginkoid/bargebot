@@ -74,7 +74,11 @@ class Basic(BaseCog):
         if ctx.message.author is None:
             await MessageUtils.send_to(ctx, 'NO', 'quote_not_visible_to_user')
         else:
-            member = await message.guild.fetch_member(ctx.message.author.id)
+            try:
+                member = await message.guild.fetch_member(ctx.message.author.id)
+            except discord.NotFound:
+                await MessageUtils.send_to(ctx, 'NO', 'quote_not_visible_to_user')
+                return
             permissions = message.channel.permissions_for(member)
             if permissions.read_message_history and permissions.read_message_history:
                 if message.channel.is_nsfw() and not ctx.channel.is_nsfw():
