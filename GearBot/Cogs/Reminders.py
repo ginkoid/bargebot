@@ -84,8 +84,10 @@ class Reminders(BaseCog):
                                      duration_identifier=duration.unit)
 
     @remind.command(aliases=["s"])
-    async def snooze(self, ctx, duration: Duration = DurationHolder(5, 'm')):
+    async def snooze(self, ctx, duration: Duration = DurationHolder(5, 'm'), unit: str = None):
         """remind_snooze_help"""
+        if duration.unit is None:
+            duration.unit = unit
         duration_seconds = duration.to_seconds(ctx)
         if duration_seconds <= 0:
             await MessageUtils.send_to(ctx, "NO", "reminder_time_travel")
