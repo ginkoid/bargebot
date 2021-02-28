@@ -19,7 +19,7 @@ from Util import Configuration, GearbotLogging, Emoji, Pages, Utils, Translator,
     ServerInfo
 from Util.Permissioncheckers import NotCachedException
 from Util.Utils import to_pretty_time
-from database import DatabaseConnector, DBUtils
+from database import DatabaseConnector
 
 
 def prefix_callable(bot, message):
@@ -124,8 +124,6 @@ async def on_ready(bot):
             bot.loading_task.cancel()
         bot.loading_task = asyncio.create_task(fill_cache(bot))
 
-        asyncio.create_task(message_flusher())
-
     except Exception as e:
         await handle_exception("Ready event failure", bot, e)
 
@@ -172,12 +170,6 @@ async def cache_guild(bot, guild_id):
     await guild.chunk(cache=True)
     if guild_id in bot.missing_guilds:
         bot.missing_guilds.remove(guild_id)
-
-
-async def message_flusher():
-    while True:
-        await asyncio.sleep(60)
-        await DBUtils.flush()
 
 async def on_message(bot, message:Message):
     if message.author.bot:

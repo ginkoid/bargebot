@@ -56,7 +56,7 @@ class Reminders(BaseCog):
                 await m.add_reaction(e)
 
             try:
-                reaction = await ctx.bot.wait_for('raw_reaction_add', timeout=30, check=lambda reaction: reaction.user_id == ctx.message.author.id and str(reaction.emoji) in [one, two, no])
+                reaction = await ctx.bot.wait_for('raw_reaction_add', timeout=30, check=lambda reaction: reaction.user_id == ctx.message.author.id and str(reaction.emoji) in [one, two, no] and reaction.message_id == m.id)
             except asyncio.TimeoutError:
                 await MessageUtils.send_to(ctx, "NO", "confirmation_timeout", timeout=30)
                 return
@@ -67,7 +67,10 @@ class Reminders(BaseCog):
                 else:
                     dm = str(reaction.emoji) == two
             finally:
-                await m.delete()
+                try:
+                    await m.delete()
+                except (NotFound, Forbidden):
+                    pass
 
         else:
             dm = True

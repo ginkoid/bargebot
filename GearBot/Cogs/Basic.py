@@ -66,7 +66,7 @@ class Basic(BaseCog):
         await message.edit(content=f":hourglass: {Translator.translate('ping_pong', ctx, rest=rest, latency=latency)} :hourglass:")
 
 
-    @commands.command()
+    @commands.command(aliases=["q"])
     @commands.guild_only()
     @commands.bot_has_permissions(embed_links=True)
     async def quote(self, ctx: commands.Context, *, message:Message):
@@ -80,7 +80,7 @@ class Basic(BaseCog):
                 await MessageUtils.send_to(ctx, 'NO', 'quote_not_visible_to_user')
                 return
             permissions = message.channel.permissions_for(member)
-            if permissions.read_message_history and permissions.read_message_history:
+            if permissions.read_message_history:
                 if message.channel.is_nsfw() and not ctx.channel.is_nsfw():
                     await MessageUtils.send_to(ctx, 'NO', 'quote_nsfw_refused')
                 else:

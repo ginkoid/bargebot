@@ -743,6 +743,8 @@
   "archive_channel_help": "Archive messages from a channel",
   "archive_category_help": "Archive messages from all text channels in a category",
   "archive_user_help": "Archive messages from a user",
+  "archive_not_visible_to_user": "You don't have permission to read that channel.",
+  "archive_category_no_channels": "That category has no visible channels.",
   "mban_help": "Bans multiple users with the same reason",
   "mwarn_help": "Warns multiple users with the same reason",
   "mcleanban_help": "Cleanbans multiple users with the same reason, cleans their messages.",

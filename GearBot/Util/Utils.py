@@ -13,7 +13,7 @@ from discord import NotFound, DiscordException
 
 from Util import GearbotLogging, Translator
 from Util.Matchers import ROLE_ID_MATCHER, CHANNEL_ID_MATCHER, ID_MATCHER, EMOJI_MATCHER, URL_MATCHER
-from database import DBUtils, DatabaseConnector
+from database import DatabaseConnector
 
 BOT = None
 
@@ -41,7 +41,6 @@ def save_to_disk(filename, dict):
 
 async def cleanExit(bot, trigger):
     await GearbotLogging.bot_log(f"Shutdown triggered by {trigger}.")
-    await DBUtils.do_flush()
     await DatabaseConnector.close()
     GearbotLogging.info("Closed database connection")
     await bot.aiosession.close()

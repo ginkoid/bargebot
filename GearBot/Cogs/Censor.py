@@ -40,7 +40,7 @@ class Censor(BaseCog):
             author_id = m.author
         else:
             permissions = channel.permissions_for(channel.guild.me)
-            if permissions.read_messages and permissions.read_message_history:
+            if permissions.read_message_history:
                 try:
                     message = await channel.fetch_message(event.message_id)
                 except (discord.NotFound, discord.Forbidden): # we should never get forbidden, be we do, somehow

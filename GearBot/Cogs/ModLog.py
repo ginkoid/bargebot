@@ -37,7 +37,7 @@ class ModLog(BaseCog):
         no_access = 0
         for channel in guild.text_channels:
             permissions = channel.permissions_for(guild.get_member(self.bot.user.id))
-            if permissions.read_messages and permissions.read_message_history:
+            if permissions.read_message_history:
 
                 async for message in channel.history(limit=limit, oldest_first=False):
                     if not self.running:

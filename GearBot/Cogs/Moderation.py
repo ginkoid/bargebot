@@ -20,7 +20,6 @@ from Util.Actions import ActionFailed
 from Util.Converters import BannedMember, UserID, Reason, Duration, DiscordUser, PotentialID, RoleMode, Guild, \
     RangedInt, Message, RangedIntBan, VerificationLevel, Nickname
 from Util.Permissioncheckers import bot_has_guild_permission
-from database import DBUtils
 from database.DatabaseConnector import LoggedMessage, Infraction
 
 class Moderation(BaseCog):
@@ -872,7 +871,7 @@ class Moderation(BaseCog):
                     GearbotLogging.log_key(ctx.guild.id, 'unmute_modlog', user=Utils.clean_user(target), user_id=target.id, moderator=Utils.clean_user(ctx.author), moderator_id=ctx.author.id, reason=reason, inf=i.id)
 
 
-    @commands.command(aliases=["user", "info"])
+    @commands.command(aliases=["user", "info", "whois"])
     @commands.bot_has_permissions(embed_links=True)
     async def userinfo(self, ctx: commands.Context, *, user: DiscordUser = None):
         """userinfo_help"""
@@ -937,22 +936,26 @@ class Moderation(BaseCog):
             await ctx.invoke(self.bot.get_command("help"), query="archive")
 
     @archive.command()
-    async def channel(self, ctx, channel: Union[discord.TextChannel, int] = None, amount=5000):
+    async def channel(self, ctx, channel_input: Union[discord.TextChannel, int] = None, amount=5000):
         """archive_channel_help"""
         if amount > 5000:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_too_much', ctx)}")
             return
-        if channel is None:
-            channel = ctx.message.channel
-        if isinstance(channel, int):
-            channel_id = channel
-            channel_name = str(channel)
+        if channel_input is None:
+            channel_input = ctx.message.channel
+        if isinstance(channel_input, int):
+            channel_id = channel_input
+            channel_name = str(channel_input)
         else:
-            channel_id = channel.id
-            channel_name = channel.name
+            channel_id = channel_input.id
+            channel_name = channel_input.name
+        channel = ctx.guild.get_channel(channel_id)
+        if not ctx.author.guild_permissions.administrator and (channel is None or not channel.permissions_for(ctx.author).read_message_history):
+            await MessageUtils.send_to(ctx, "NO", "archive_not_visible_to_user")
+            return
         if Configuration.get_var(ctx.guild.id, "MESSAGE_LOGS", "ENABLED"):
             async with ctx.typing():
-                messages = await LoggedMessage.filter(server=ctx.guild.id, channel=channel_id).order_by("-messageid").limit(amount).prefetch_related("attachments") + DBUtils.get_messages_for_channel(channel_id)
+                messages = await LoggedMessage.filter(server=ctx.guild.id, channel=channel_id).order_by("-messageid").limit(amount).prefetch_related("attachments")
                 await Archive.ship_messages(ctx, messages, Translator.translate(f'archived_channel_count', ctx, count=len(messages), channel=Utils.escape_markdown(channel_name)))
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
@@ -963,10 +966,17 @@ class Moderation(BaseCog):
         if amount > 5000:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_too_much', ctx)}")
             return
+        channels = []
+        for channel in category.text_channels:
+            if channel.permissions_for(ctx.author).read_message_history:
+                channels.append(channel)
+        if len(channels) == 0:
+            await MessageUtils.send_to(ctx, "WARNING", "archive_category_no_channels")
+            return
         if Configuration.get_var(ctx.guild.id, "MESSAGE_LOGS", "ENABLED"):
-            for channel in category.text_channels:
+            for channel in channels:
                 async with ctx.typing():
-                    messages = await LoggedMessage.filter(server=ctx.guild.id, channel=channel.id).order_by("-messageid").limit(amount).prefetch_related("attachments") + DBUtils.get_messages_for_channel(channel.id)
+                    messages = await LoggedMessage.filter(server=ctx.guild.id, channel=channel.id).order_by("-messageid").limit(amount).prefetch_related("attachments")
                     await Archive.ship_messages(ctx, messages, Translator.translate(f'archived_category_count', ctx, count=len(messages), channel=Utils.escape_markdown(channel.name), category=Utils.escape_markdown(category.name)))
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")
@@ -977,9 +987,13 @@ class Moderation(BaseCog):
         if amount > 5000:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_too_much', ctx)}")
             return
+        channel_ids = []
+        for channel in ctx.guild.text_channels:
+            if channel.permissions_for(ctx.author).read_message_history:
+                channel_ids.append(channel.id)
         if Configuration.get_var(ctx.guild.id, "MESSAGE_LOGS", "ENABLED"):
             async with ctx.typing():
-                messages = await LoggedMessage.filter(server=ctx.guild.id, author=user).order_by("-messageid").limit(amount).prefetch_related("attachments") + DBUtils.get_messages_for_user_in_guild(user, ctx.guild.id)
+                messages = await LoggedMessage.filter(server=ctx.guild.id, author=user, channel__in=channel_ids).order_by("-messageid").limit(amount).prefetch_related("attachments")
                 await Archive.ship_messages(ctx, messages, Translator.translate(f'archived_user_count', ctx, count=len(messages), user=await Utils.username(user)))
         else:
             await ctx.send(f"{Emoji.get_chat_emoji('NO')} {Translator.translate('archive_no_edit_logs', ctx)}")

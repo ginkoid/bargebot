@@ -5,7 +5,6 @@ from discord.ext.commands import UserConverter, BadArgument, Converter
 from Bot.TheRealGearBot import PostParseError
 from Util import Utils, Configuration, Translator
 from Util.Matchers import *
-from database import DBUtils
 from database.DatabaseConnector import LoggedMessage, Infraction
 
 
@@ -165,7 +164,7 @@ class Message(Converter):
     @staticmethod
     async def fetch_message(ctx, message_id, channel_id):
         if channel_id is None:
-            logged_message = await LoggedMessage.get_or_none(messageid=message_id) or DBUtils.get_message(message_id)
+            logged_message = await LoggedMessage.get_or_none(messageid=message_id)
             if logged_message is not None:
                 channel_id = logged_message.channel
 
@@ -177,7 +176,7 @@ class Message(Converter):
                 raise TranslatedBadArgument('unknown_channel', ctx)
 
         permissions = channel.permissions_for(channel.guild.me)
-        if not permissions.read_messages or not permissions.read_message_history:
+        if not permissions.read_message_history:
             return
         try:
             return await channel.fetch_message(message_id)
