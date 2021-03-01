@@ -29,7 +29,7 @@ class Infractions(BaseCog):
 
     @commands.guild_only()
     @commands.command()
-    async def warn(self, ctx: commands.Context, user: DiscordUser, *, reason: Reason):
+    async def warn(self, ctx: commands.Context, member: discord.User, *, reason: Reason):
         """warn_help"""
         # don't allow warning GearBot, get some feedback about issues instead
         if user.id == self.bot.user.id:
@@ -53,7 +53,7 @@ class Infractions(BaseCog):
             await MessageUtils.send_to(ctx, "THINK", "cant_warn_bot")
             return
 
-        await Actions.act(ctx, "warning", user.id, self._warn, allow_bots=False, reason=reason, check_bot_ability=False, require_on_server=False)
+        await Actions.act(ctx, "warning", member.id, self._warn, allow_bots=False, reason=reason, check_bot_ability=False, require_on_server=False)
 
     @commands.guild_only()
     @commands.command()
