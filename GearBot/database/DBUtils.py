@@ -1,5 +1,7 @@
 from discord import MessageType
+from tortoise import Tortoise
 from tortoise.exceptions import IntegrityError
+from tortoise.transactions import in_transaction
 
 from database.DatabaseConnector import LoggedMessage, LoggedAttachment
 
