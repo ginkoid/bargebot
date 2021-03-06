@@ -1,10 +1,11 @@
 import asyncio
 import datetime
 import re
-from collections import namedtuple
 
 import emoji
-from concurrent.futures import CancelledError
+from asyncio import CancelledError
+
+import emoji
 
 import time
 from collections import deque
@@ -321,7 +322,7 @@ class AntiSpam(BaseCog):
                 for b in buckets:
                     t = b["TYPE"]
                     if t == "censored":
-                        msg_time = int(message.created_at.timestamp()) * 1000
+                        msg_time = int(snowflake_time(message.id).timestamp()) *1000
                         bucket = self.get_bucket(message.guild.id, f"censored:{count}", b, message.author.id)
                         if bucket is not None and await bucket.check(message.author.id, msg_time, 1, f"{message.channel.id}-{message.id}"):
                             count = await bucket.count(message.author.id, msg_time, expire=False)
