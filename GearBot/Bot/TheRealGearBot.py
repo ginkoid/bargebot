@@ -138,7 +138,7 @@ async def fill_cache(bot):
                 tasks = []
                 try:
                     tasks = [asyncio.create_task(cache_guild(bot, guild_id)) for guild_id in bot.missing_guilds]
-                    await asyncio.wait_for(asyncio.gather(*tasks), 600)
+                    await asyncio.wait_for(asyncio.gather(*tasks), 1800)
                 except (CancelledError, concurrent.futures._base.CancelledError):
                     pass
                 except concurrent.futures._base.TimeoutError:

@@ -7,6 +7,7 @@ from discord import Object, HTTPException, MessageType, AllowedMentions
 
 from Util import Translator, Emoji, Archive
 from database import DBUtils
+from database.DBUtils import fakeLoggedMessage
 from database.DatabaseConnector import LoggedMessage
 
 Message = namedtuple("Message", "messageid author content channel server attachments type pinned")
