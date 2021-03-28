@@ -141,7 +141,7 @@ async def fill_cache(bot):
                     await asyncio.wait_for(asyncio.gather(*tasks), 1800)
                 except (CancelledError, concurrent.futures._base.CancelledError):
                     pass
-                except concurrent.futures._base.TimeoutError:
+                except asyncio.exceptions.TimeoutError:
                     if old == len(bot.missing_guilds):
                         await GearbotLogging.bot_log(f"{Emoji.get_chat_emoji('NO')} Timed out fetching member chunks canceling all pending fetches to try again!")
                         for task in tasks:
@@ -166,10 +166,10 @@ async def fill_cache(bot):
         bot.loading_task = None
 
 async def cache_guild(bot, guild_id):
-    guild = bot.get_guild(guild_id)
-    await guild.chunk(cache=True)
     if guild_id in bot.missing_guilds:
+        guild = bot.get_guild(guild_id)
         bot.missing_guilds.remove(guild_id)
+        await guild.chunk(cache=True)
 
 async def on_message(bot, message:Message):
     if message.author.bot:
@@ -202,14 +202,13 @@ async def on_guild_join(bot, guild: Guild):
         await guild.leave()
         await GearbotLogging.bot_log(f"Someone tried to add me to {await Utils.clean(guild.name)} ({guild.id}) but the owner {guild.owner_id} is blocked")
     else:
-        bot.missing_guilds.add(guild.id)
-        await guild.chunk(cache=True)
-        bot.missing_guilds.remove(guild.id)
         GearbotLogging.info(f"A new guild came up: {guild.name} ({guild.id}).")
         Configuration.load_config(guild.id)
-        await GearbotLogging.bot_log(f"{Emoji.get_chat_emoji('JOIN')} A new guild came up: {await Utils.clean(guild.name)} ({guild.id}).", embed=ServerInfo.server_info_embed(guild))
+        name = await Utils.clean(guild.name)
+        await guild.chunk(cache=True)
+        await GearbotLogging.bot_log(f"{Emoji.get_chat_emoji('JOIN')} A new guild came up: {name} ({guild.id}).", embed=ServerInfo.server_info_embed(guild))
 
-async def on_guild_remove(guild):
+async def on_guild_remove(bot, guild):
     blocked = Configuration.get_persistent_var("server_blocklist", [])
     blocked_users = Configuration.get_persistent_var("user_blocklist", [])
     if guild.id not in blocked and guild.owner_id not in blocked_users:
