@@ -784,7 +784,7 @@ class Moderation(BaseCog):
                                         try:
                                             dur=f'{duration.length}{duration.unit}'
                                             await target.send(
-                                                f"{Emoji.get_chat_emoji('MUTE')} {Translator.translate('extend_mute_dm', ctx.guild.id, server=ctx.guild.name, duration=dur)}```{reason}```")
+                                                f"{Emoji.get_chat_emoji('MUTE')} {Translator.translate('extend_mute_dm', ctx.guild.id, server=ctx.guild.name, duration=dur, guild_id=ctx.guild.id)}```{reason}```")
                                         except (discord.HTTPException, AttributeError):
                                             GearbotLogging.log_key(ctx.guild.id, 'mute_could_not_dm', user=name,
                                                                 userid=target.id)
@@ -805,7 +805,7 @@ class Moderation(BaseCog):
                                         try:
                                             dur=f'{duration.length}{duration.unit}'
                                             await target.send(
-                                                f"{Emoji.get_chat_emoji('MUTE')} {Translator.translate('mute_duration_until_dm', ctx.guild.id, server=ctx.guild.name, duration=dur)}```{reason}```")
+                                                f"{Emoji.get_chat_emoji('MUTE')} {Translator.translate('mute_duration_until_dm', ctx.guild.id, server=ctx.guild.name, duration=dur, guild_id=ctx.guild.id)}```{reason}```")
                                         except (discord.HTTPException, AttributeError):
                                             GearbotLogging.log_key(ctx.guild.id, 'mute_could_not_dm', user=name,
                                                                 userid=target.id)
@@ -826,7 +826,7 @@ class Moderation(BaseCog):
                                         try:
                                             dur=f'{duration.length}{duration.unit}'
                                             await target.send(
-                                                f"{Emoji.get_chat_emoji('MUTE')} {Translator.translate('mute_duration_change_dm', ctx.guild.id, server=ctx.guild.name, duration=dur)}```{reason}```")
+                                                f"{Emoji.get_chat_emoji('MUTE')} {Translator.translate('mute_duration_change_dm', ctx.guild.id, server=ctx.guild.name, duration=dur, guild_id=ctx.guild.id)}```{reason}```")
                                         except (discord.HTTPException, AttributeError):
                                             GearbotLogging.log_key(ctx.guild.id, 'mute_could_not_dm', user=name,
                                                                 userid=target.id)

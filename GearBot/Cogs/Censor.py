@@ -93,7 +93,6 @@ class Censor(BaseCog):
 
         content = content.lower()
 
-<<<<<<< HEAD
         for bad in full_message_list:
             if fnmatch.fnmatchcase(content, bad.lower()):
                 await self.censor_message(message_id, content, channel, member, "", "_content", edit=edit)
@@ -102,15 +101,6 @@ class Censor(BaseCog):
         for bad in censorlist:
             if fnmatch.fnmatchcase(content, f'*{bad.lower()}*'):
                 await self.censor_message(message_id, content, channel, member, bad, edit=edit)
-=======
-        if content in full_message_list:
-            await self.censor_message(message_id, content, channel, member, "", "_content", edit=edit, reply=reply, attachments=attachments)
-            return
-
-        for bad in (w.lower() for w in censorlist):
-            if bad in content:
-                await self.censor_message(message_id, content, channel, member, bad, edit=edit, reply=reply, attachments=attachments)
->>>>>>> f2c416a (add replies and attachments in censor messages)
                 return
 
         if len(word_censorlist) > 0:
@@ -172,12 +162,8 @@ class Censor(BaseCog):
         else:
             GearbotLogging.log_key(channel.guild.id, f'censored_message_failed{key}{e}', user=member,
                                    user_id=member.id, message=clean_message, sequence=bad,
-<<<<<<< HEAD
-                                   link=f'https://discord.com/channels/{channel.guild.id}/{channel.id}/{message_id}')
-=======
                                    link='https://discord.com/channels/{0}/{1}/{2}'.format(channel.guild.id, channel.id, message_id),
                                    reply=reply_str, attachments=attachments_str)
->>>>>>> f2c416a (add replies and attachments in censor messages)
         self.bot.dispatch("user_censored", messageholder(message_id, member, channel, channel.guild))
 
     async def censor_invite(self, member, message_id, channel, code, server_name, content, edit, reply, attachments):
