@@ -778,7 +778,7 @@ class Moderation(BaseCog):
                                                            moderator=Utils.clean_user(ctx.author),
                                                            moderator_id=ctx.author.id,
                                                            duration=f'{duration.length} {duration.unit}',
-                                                           reason=reason, inf_id=infraction.id, end=infraction.end)
+                                                           reason=reason, inf_id=infraction.id, end=datetime.datetime.utcfromtimestamp(infraction.end).strftime('%Y-%m-%d %H:%M:%S'))
                                     name = Utils.clean_user(target)
                                     if Configuration.get_var(ctx.guild.id, "INFRACTIONS", "DM_ON_MUTE"):
                                         try:
@@ -799,7 +799,7 @@ class Moderation(BaseCog):
                                                            moderator=Utils.clean_user(ctx.author),
                                                            moderator_id=ctx.author.id,
                                                            duration=f'{duration.length} {duration.unit}',
-                                                           reason=reason, inf_id=infraction.id, end=infraction.end)
+                                                           reason=reason, inf_id=infraction.id, end=datetime.datetime.utcfromtimestamp(infraction.end).strftime('%Y-%m-%d %H:%M:%S'))
                                     name = Utils.clean_user(target)
                                     if Configuration.get_var(ctx.guild.id, "INFRACTIONS", "DM_ON_MUTE"):
                                         try:
