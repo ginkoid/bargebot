@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from Util import Emoji, MessageUtils
 
-async def confirm(ctx: commands.Context, text, timeout=30, on_yes=None, on_no=None, delete=True):
+async def confirm(ctx: commands.Context, text, timeout=30, on_yes=None, on_no=None, delete=True, confirm_cancel=True):
     yes = str(Emoji.get_emoji("YES"))
     no = str(Emoji.get_emoji("NO"))
     message: discord.Message = await ctx.send(text)
@@ -40,5 +40,5 @@ async def confirm(ctx: commands.Context, text, timeout=30, on_yes=None, on_no=No
                 pass
         if on_no is not None:
             await on_no()
-        else:
+        elif confirm_cancel:
             await MessageUtils.send_to(ctx, "NO", "command_canceled")
