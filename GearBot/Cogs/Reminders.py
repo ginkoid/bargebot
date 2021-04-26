@@ -128,7 +128,7 @@ class Reminders(BaseCog):
             return
         items = "\n".join(f"{str(r.id).ljust(5)} | {timeago.format(r.send).ljust(14)} | {timeago.format(r.time).ljust(14)} | {Utils.clean_name(r.to_remind)}" for r in reminders)
         header = "ID    | Scheduled      | Delivery       | Content"
-        pages = Pages.paginate(items, prefix=f"```{header}\n{'-' * len(header)}\n", suffix="```")
+        pages = Pages.paginate(items, prefix=f"```md\n{header}\n{'-' * len(header)}\n", suffix="```")
         await Pages.create_new(self.bot, "reminder_list", ctx, pages=json.dumps(pages))
 
     @remind.command(aliases=["rm","d","delete"])
