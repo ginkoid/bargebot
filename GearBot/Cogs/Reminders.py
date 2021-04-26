@@ -1,5 +1,7 @@
 import asyncio
 import time
+import json
+import timeago
 from datetime import datetime
 from tortoise.query_utils import Q
 
@@ -8,17 +10,19 @@ from discord.ext import commands
 
 from Bot import TheRealGearBot
 from Cogs.BaseCog import BaseCog
-from Util import Utils, GearbotLogging, Emoji, Translator, MessageUtils, ServerInfo
-from Util.Converters import Duration, DurationHolder, ReminderText
+from Util import Utils, GearbotLogging, Emoji, Translator, MessageUtils, ServerInfo, Pages
+from Util.Converters import Duration, DurationHolder, PendingReminder, ReminderText
 from database.DatabaseConnector import Reminder, ReminderStatus
+
 class Reminders(BaseCog):
 
     def __init__(self, bot) -> None:
         super().__init__(bot)
 
         self.running = True
-        self.handling = set()
+        self.handling = {}
         self.bot.loop.create_task(self.delivery_service())
+        Pages.register("reminder_list", self.list_init, self.list_update)
 
     def cog_unload(self):
         self.running = False
@@ -79,12 +83,11 @@ class Reminders(BaseCog):
                         time=time.time() + duration_seconds, send=datetime.now().timestamp(), status=ReminderStatus.Pending,
                         guild_id=ctx.guild.id if ctx.guild is not None else "@me", message_id=ctx.message.id)
         if duration_seconds <= 10:
-            self.handling.add(r.id)
-            self.bot.loop.create_task(
+            self.handling[r.id] = self.bot.loop.create_task(
                 self.run_after(duration_seconds, self.deliver(r)))
         mode = "dm" if dm else "here"
         await MessageUtils.send_to(ctx, "YES", f"reminder_confirmation_{mode}", duration=duration.length,
-                                     duration_identifier=duration.unit)
+                                     duration_identifier=duration.unit, id=r.id)
 
     @remind.command(aliases=["s"])
     async def snooze(self, ctx, duration: Duration = DurationHolder(5, 'm'), unit: str = None):
@@ -110,12 +113,43 @@ class Reminders(BaseCog):
         new_reminder.time = time.time() + duration_seconds
         await new_reminder.save()
         if duration_seconds <= 10:
-            self.handling.add(new_reminder.id)
-            self.bot.loop.create_task(
+            self.handling[new_reminder.id] = self.bot.loop.create_task(
                 self.run_after(duration_seconds, self.deliver(new_reminder)))
         mode = "dm" if new_reminder.dm else "here"
         await MessageUtils.send_to(ctx, "YES", f"reminder_confirmation_{mode}", duration=duration.length,
-                                     duration_identifier=duration.unit)
+                                     duration_identifier=duration.unit, id=new_reminder.id)
+
+    @remind.command(aliases=["l"])
+    async def list(self, ctx):
+        """List your pending reminders"""
+        reminders = await Reminder.filter(status=ReminderStatus.Pending, user_id=ctx.author.id)
+        if len(reminders) == 0:
+            await MessageUtils.send_to(ctx, "WARNING", "reminder_none")
+            return
+        items = "\n".join(f"{str(r.id).ljust(5)} | {timeago.format(r.send).ljust(14)} | {timeago.format(r.time).ljust(14)} | {Utils.clean_name(r.to_remind)}" for r in reminders)
+        header = "ID    | Scheduled      | Delivery       | Content"
+        pages = Pages.paginate(items, prefix=f"```{header}\n{'-' * len(header)}\n", suffix="```")
+        await Pages.create_new(self.bot, "reminder_list", ctx, pages=json.dumps(pages))
+
+    @remind.command(aliases=["rm","d","delete"])
+    async def remove(self, ctx, reminder: PendingReminder):
+        """Delete one of your reminders"""
+        if reminder.id in self.handling:
+            task = self.handling[reminder.id]
+            task.cancel()
+        reminder.status = ReminderStatus.Failed
+        await reminder.save()
+        await MessageUtils.send_to(ctx, "YES", "reminder_removed", id=reminder.id)
+
+    async def list_init(self, ctx, pages):
+        pages = json.loads(pages)
+        return pages[0], None, len(pages) > 1
+
+    async def list_update(self, ctx, message, page_num, action, data):
+        pages = json.loads(data["pages"])
+        page, page_num = Pages.basic_pages(pages, page_num, action)
+        data["page"] = page_num
+        return page, None, data
 
     async def delivery_service(self):
         GearbotLogging.info("Starting reminder delivery background task")
@@ -125,8 +159,7 @@ class Reminders(BaseCog):
 
             for r in await Reminder.filter(time__lt=limit, status=ReminderStatus.Pending):
                 if r.id not in self.handling:
-                    self.handling.add(r.id)
-                    self.bot.loop.create_task(
+                    self.handling[r.id] = self.bot.loop.create_task(
                         self.run_after(r.time - now, self.deliver(r)))
             await asyncio.sleep(10)
         GearbotLogging.info("Reminder delivery background task terminated")

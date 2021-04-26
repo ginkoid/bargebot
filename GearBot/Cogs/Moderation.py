@@ -4,6 +4,7 @@ import re
 import time
 import typing
 import fnmatch
+import timeago
 from typing import Optional, Union
 
 import discord
@@ -279,7 +280,7 @@ class Moderation(BaseCog):
             reason = Translator.translate("no_reason", ctx.guild.id)
         await MessageUtils.send_to(ctx, "YES", "bean_confirmation", user=Utils.clean_user(user), user_id=user.id, reason=reason)
         try :
-            message = await self.bot.wait_for("message", timeout=60*5, check=lambda m: m.author == user and m.channel.guild == ctx.guild and m.channel.permissions_for(m.guild.me).add_reactions)
+            message = await self.bot.wait_for("message", timeout=60*5, check=lambda m: m.author == user and isinstance(m.channel, discord.TextChannel) and m.channel.guild == ctx.guild and m.channel.permissions_for(m.guild.me).add_reactions)
         except asyncio.TimeoutError:
             pass
         else:
@@ -907,10 +908,10 @@ class Moderation(BaseCog):
                 embed.add_field(name=Translator.translate('all_roles', ctx), value=Translator.translate("no_roles", ctx), inline=False)
 
             embed.add_field(name=Translator.translate('joined_at', ctx),
-                            value=f"``{member.joined_at}`` ({(ctx.message.created_at - member.joined_at).days} days ago)",
+                            value=f"``{member.joined_at}`` ({timeago.format(member.joined_at)})",
                             inline=True)
         embed.add_field(name=Translator.translate('account_created_at', ctx),
-                        value=f"``{user.created_at}`` ({(ctx.message.created_at - user.created_at).days} days ago)",
+                        value=f"``{user.created_at}`` ({timeago.format(user.created_at)})",
                         inline=True)
         if ctx.guild is not None:
             il = await Infraction.filter(user_id=user.id, guild_id=ctx.guild.id).count()

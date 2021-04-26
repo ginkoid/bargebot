@@ -5,7 +5,7 @@ from discord.ext.commands import UserConverter, BadArgument, Converter
 from Bot.TheRealGearBot import PostParseError
 from Util import Utils, Configuration, Translator
 from Util.Matchers import *
-from database.DatabaseConnector import LoggedMessage, Infraction
+from database.DatabaseConnector import LoggedMessage, Infraction, Reminder, ReminderStatus
 
 
 class TranslatedBadArgument(BadArgument):
@@ -112,6 +112,17 @@ class Guild(Converter):
             else:
                 return guild
 
+
+class PendingReminder(Converter):
+    async def convert(self, ctx, argument):
+        try:
+            id = int(argument)
+        except ValueError:
+            raise TranslatedBadArgument("reminder_unknown", ctx)
+        reminder = await Reminder.get_or_none(user_id=ctx.author.id, status=ReminderStatus.Pending, id=id)
+        if not reminder:
+            raise TranslatedBadArgument("reminder_unknown", ctx)
+        return reminder
 
 class Message(Converter):
 

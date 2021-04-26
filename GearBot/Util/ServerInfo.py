@@ -1,4 +1,5 @@
 import time
+import timeago
 from datetime import datetime
 
 import discord
@@ -28,7 +29,7 @@ def server_info_embed(guild):
     )
     embed.add_field(
         name=Translator.translate('created_at', guild),
-        value=f"{guild_made} ({(datetime.fromtimestamp(time.time()) - guild.created_at).days} days ago)",
+        value=f"{guild_made} ({timeago.format(guild.created_at)})",
         inline=True
     )
     embed.add_field(
