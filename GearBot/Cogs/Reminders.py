@@ -84,7 +84,7 @@ class Reminders(BaseCog):
                         guild_id=ctx.guild.id if ctx.guild is not None else "@me", message_id=ctx.message.id)
         if duration_seconds <= 10:
             self.handling[r.id] = self.bot.loop.create_task(
-                self.run_after(duration_seconds, self.deliver(r)))
+                self.run_after(duration_seconds, self.deliver(r.id)))
         mode = "dm" if dm else "here"
         await MessageUtils.send_to(ctx, "YES", f"reminder_confirmation_{mode}", duration=duration.length,
                                      duration_identifier=duration.unit, id=r.id)
@@ -114,14 +114,14 @@ class Reminders(BaseCog):
         await new_reminder.save()
         if duration_seconds <= 10:
             self.handling[new_reminder.id] = self.bot.loop.create_task(
-                self.run_after(duration_seconds, self.deliver(new_reminder)))
+                self.run_after(duration_seconds, self.deliver(new_reminder.id)))
         mode = "dm" if new_reminder.dm else "here"
         await MessageUtils.send_to(ctx, "YES", f"reminder_confirmation_{mode}", duration=duration.length,
                                      duration_identifier=duration.unit, id=new_reminder.id)
 
     @remind.command(aliases=["l"])
     async def list(self, ctx):
-        """List your pending reminders"""
+        """remind_list_help"""
         reminders = await Reminder.filter(status=ReminderStatus.Pending, user_id=ctx.author.id)
         if len(reminders) == 0:
             await MessageUtils.send_to(ctx, "WARNING", "reminder_none")
@@ -133,13 +133,17 @@ class Reminders(BaseCog):
 
     @remind.command(aliases=["rm","d","delete"])
     async def remove(self, ctx, reminder: PendingReminder):
-        """Delete one of your reminders"""
-        if reminder.id in self.handling:
-            task = self.handling[reminder.id]
-            task.cancel()
+        """remind_remove_help"""
         reminder.status = ReminderStatus.Failed
         await reminder.save()
         await MessageUtils.send_to(ctx, "YES", "reminder_removed", id=reminder.id)
+
+    @remind.command(aliases=["update","e"])
+    async def edit(self, ctx, reminder: PendingReminder, content: ReminderText):
+        """remind_edit_help"""
+        reminder.to_remind = await Utils.clean(content, markdown=False, links=False, emoji=False)
+        await reminder.save()
+        await MessageUtils.send_to(ctx, "YES", "reminder_edited", id=reminder.id)
 
     async def list_init(self, ctx, pages):
         pages = json.loads(pages)
@@ -154,13 +158,17 @@ class Reminders(BaseCog):
     async def delivery_service(self):
         GearbotLogging.info("Starting reminder delivery background task")
         while self.running:
-            now = time.time()
-            limit = datetime.fromtimestamp(time.time() + 30).timestamp()
+            try:
+                now = time.time()
+                limit = datetime.fromtimestamp(time.time() + 30).timestamp()
 
-            for r in await Reminder.filter(time__lt=limit, status=ReminderStatus.Pending):
-                if r.id not in self.handling:
-                    self.handling[r.id] = self.bot.loop.create_task(
-                        self.run_after(r.time - now, self.deliver(r)))
+                for r in await Reminder.filter(time__lt=limit, status=ReminderStatus.Pending):
+                    if r.id not in self.handling:
+                        self.handling[r.id] = self.bot.loop.create_task(
+                            self.run_after(r.time - now, self.deliver(r.id)))
+            except Exception as ex:
+                await TheRealGearBot.handle_exception("Reminder loop", self.bot, ex)
+                pass
             await asyncio.sleep(10)
         GearbotLogging.info("Reminder delivery background task terminated")
 
@@ -170,7 +178,10 @@ class Reminders(BaseCog):
         if self.running:  # cog got terminated, new cog is now in charge of making sure this gets handled
             await action
 
-    async def deliver(self, r):
+    async def deliver(self, reminder_id):
+        r = await Reminder.get_or_none(id=reminder_id, status=ReminderStatus.Pending)
+        if r is None:
+            return
         channel = None
         try:
             channel = await self.bot.fetch_channel(r.channel_id)
