@@ -34,7 +34,7 @@ class CustCommands(BaseCog):
             await CustomCommand.filter(serverid = guild.id).delete()
 
 
-    @commands.group(name="commands", aliases=['command'])
+    @commands.group(name="commands", aliases=['command','cmd'])
     @commands.guild_only()
     @commands.bot_has_permissions(embed_links=True, external_emojis=True, add_reactions=True)
     async def command(self, ctx:commands.Context):

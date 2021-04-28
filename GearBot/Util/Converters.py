@@ -183,8 +183,9 @@ class Message(Converter):
             channel = ctx.channel
         else:
             channel = ctx.bot.get_channel(channel_id)
-            if channel is None:
-                raise TranslatedBadArgument('unknown_channel', ctx)
+
+        if not isinstance(channel, discord.TextChannel):
+            raise TranslatedBadArgument('unknown_channel', ctx)
 
         permissions = channel.permissions_for(channel.guild.me)
         if not permissions.read_message_history:
