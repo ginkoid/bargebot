@@ -10,14 +10,13 @@ from tortoise.query_utils import Q
 from Cogs.BaseCog import BaseCog
 from Util import InfractionUtils, Emoji, Utils, GearbotLogging, Translator, Configuration, \
     Confirmation, MessageUtils, ReactionManager, Pages, Actions
-from Util.Converters import UserID, Reason, InfSearchLocation, ServerInfraction, PotentialID
+from Util.Converters import DiscordUser, UserID, Reason, InfSearchLocation, ServerInfraction, PotentialID
 from database.DatabaseConnector import Infraction
 
 
 class Infractions(BaseCog):
 
-    @staticmethod
-    async def _warn(ctx, target, *, reason, message=True, dm_action=True):
+    async def _warn(self, ctx, target, *, reason, message=True, dm_action=True):
         i = await InfractionUtils.add_infraction(ctx.guild.id, target.id, ctx.author.id, "Warn", reason)
         name = Utils.clean_user(target)
         if message:
@@ -27,8 +26,8 @@ class Infractions(BaseCog):
                                user_id=target.id, moderator_id=ctx.author.id, inf=i.id)
         if Configuration.get_var(ctx.guild.id, "INFRACTIONS", "DM_ON_WARN") and dm_action:
             try:
-                dm_channel = await target.create_dm()
-                await dm_channel.send(
+                dm = await self.bot.fetch_user(target.id)
+                await dm.send(
                     f"{Emoji.get_chat_emoji('WARNING')} {Translator.translate('warning_dm', ctx.guild.id, server=ctx.guild.name)}```{reason}```")
             except discord.Forbidden:
                 GearbotLogging.log_key(ctx.guild.id, 'warning_could_not_dm', user=name,
@@ -36,10 +35,10 @@ class Infractions(BaseCog):
 
     @commands.guild_only()
     @commands.command()
-    async def warn(self, ctx: commands.Context, member: discord.Member, *, reason: Reason):
+    async def warn(self, ctx: commands.Context, user: DiscordUser, *, reason: Reason):
         """warn_help"""
         # don't allow warning GearBot, get some feedback about issues instead
-        if member.id == self.bot.user.id:
+        if user.id == self.bot.user.id:
 
             async def yes():
                 channel = self.bot.get_channel(Configuration.get_master_var("inbox", 0))
@@ -52,15 +51,15 @@ class Infractions(BaseCog):
             await Confirmation.confirm(ctx, message, on_yes=yes)
             return
 
-        if member.discriminator == '0000':
+        if user.discriminator == '0000':
             await MessageUtils.send_to(ctx, 'NO', 'cant_warn_system_user')
             return
 
-        if member.bot:
+        if user.bot:
             await MessageUtils.send_to(ctx, "THINK", "cant_warn_bot")
             return
 
-        await Actions.act(ctx, "warning", member.id, self._warn, allow_bots=False, reason=reason, check_bot_ability=False)
+        await Actions.act(ctx, "warning", user.id, self._warn, allow_bots=False, reason=reason, check_bot_ability=False, require_on_server=False)
 
     @commands.guild_only()
     @commands.command()
@@ -71,11 +70,9 @@ class Infractions(BaseCog):
             reason = Translator.translate("no_reason", ctx.guild.id)
 
         async def yes():
-            pmessage = await MessageUtils.send_to(ctx, "REFRESH", "processing")
             failures = await Actions.mass_action(ctx, "warning", targets, self._warn, max_targets=10, allow_bots=False,
-                                                 message=False, reason=reason, dm_action=True)
+                                                 message=False, reason=reason, dm_action=True, require_on_server=False)
 
-            await pmessage.delete()
             await MessageUtils.send_to(ctx, "YES", "mwarn_confirmation", count=len(targets) - len(failures))
             if len(failures) > 0:
                 await Pages.create_new(self.bot, "mass_failures", ctx, action="warn",
