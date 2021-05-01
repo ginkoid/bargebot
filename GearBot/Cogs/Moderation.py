@@ -1383,6 +1383,8 @@ class Moderation(BaseCog):
                 return
 
     async def flag_message(self, content, flagged, guild_id, channel_id, message_id, author=None, type=""):
+        if Configuration.get_var(guild_id, "FLAGGING", "TRUSTED_BYPASS") and Permissioncheckers.is_trusted(author):
+            return
         if author is None:
             message = await MessageUtils.get_message_data(self.bot, message_id)
             if message is None:
