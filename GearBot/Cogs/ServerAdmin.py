@@ -1369,7 +1369,8 @@ class ServerAdmin(BaseCog):
         "max_mentions",
         "max_links",
         "max_emoji",
-        "censored"
+        "censored",
+        "voice_joins"
     }
 
     anti_spam_punishments = [
