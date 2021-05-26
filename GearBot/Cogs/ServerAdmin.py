@@ -1216,7 +1216,7 @@ class ServerAdmin(BaseCog):
             buffer.write(out.encode())
             buffer.seek(0)
             await MessageUtils.send_to(ctx, 'YES', 'word_flag_list_file',
-                                       attachment=discord.File(buffer, filename="flag_list.txt"),
+                                       attachment=discord.File(buffer, filename="word_flag_list.txt"),
                                        server=ctx.guild.name)
         else:
             await MessageUtils.send_to(ctx, 'WARNING', 'word_flag_list_empty')

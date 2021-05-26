@@ -637,7 +637,7 @@ class Moderation(BaseCog):
             reason = " ".join(parts[1:])
         reason = Utils.enrich_reason(ctx, reason)
         roleid = Configuration.get_var(ctx.guild.id, "ROLES", "MUTE_ROLE")
-        if roleid is 0:
+        if roleid == 0:
             await ctx.send(
                 f"{Emoji.get_chat_emoji('WARNING')} {Translator.translate('mmute_not_configured', ctx.guild.id)}")
         else:
