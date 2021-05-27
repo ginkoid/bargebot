@@ -1048,10 +1048,10 @@ class ServerAdmin(BaseCog):
         word = word.lower()
         censor_list = Configuration.get_var(ctx.guild.id, "CENSORING", "WORD_CENSORLIST")
         if word in censor_list:
-            await MessageUtils.send_to(ctx, "NO", "already_censored", word=word)
+            await MessageUtils.send_to(ctx, "NO", "word_already_censored", word=word)
         else:
             censor_list.append(word)
-            await MessageUtils.send_to(ctx, "YES", "entry_added", entry=word)
+            await MessageUtils.send_to(ctx, "YES", "word_entry_added", entry=word)
             Configuration.save(ctx.guild.id)
             if ctx.guild.id in self.bot.get_cog("Censor").regexes:
                 del self.bot.get_cog("Censor").regexes[ctx.guild.id]
@@ -1061,10 +1061,10 @@ class ServerAdmin(BaseCog):
         word = word.lower()
         censor_list = Configuration.get_var(ctx.guild.id, "CENSORING", "WORD_CENSORLIST")
         if word not in censor_list:
-            await MessageUtils.send_to(ctx, "NO", "not_censored", word=word)
+            await MessageUtils.send_to(ctx, "NO", "word_not_censored", word=word)
         else:
             censor_list.remove(word)
-            await MessageUtils.send_to(ctx, "YES", "entry_removed", entry=word)
+            await MessageUtils.send_to(ctx, "YES", "word_entry_removed", entry=word)
             Configuration.save(ctx.guild.id)
             if ctx.guild.id in self.bot.get_cog("Censor").regexes:
                 del self.bot.get_cog("Censor").regexes[ctx.guild.id]
