@@ -34,7 +34,7 @@ class BaseCog(commands.Cog):
 # The above allows for fancy, clean, lookups for what permissions to use
 cog_permissions = {
     "AntiRaid": {
-        "min": 2,
+        "min": 1,
         "max": 6,
         "required": 2,
         "commands": {}
@@ -57,21 +57,21 @@ cog_permissions = {
                 "min": 0,
                 "max": 6,
                 "commands": {
-                    "create": {"required": 2, "min": 2, "max": 6, "commands": {}},
-                    "remove": {"required": 2, "min": 2, "max": 6, "commands": {}},
-                    "update": {"required": 2, "min": 2, "max": 6, "commands": {}},
+                    "create": {"required": 2, "min": 1, "max": 6, "commands": {}},
+                    "remove": {"required": 2, "min": 1, "max": 6, "commands": {}},
+                    "update": {"required": 2, "min": 1, "max": 6, "commands": {}},
                 }
             }
         }
     },
 
     "Emoji": {
-        "min": 2,
+        "min": 1,
         "max": 6,
         "required": 3,
         "commands": {
             "emoji": {
-                "min": 2,
+                "min": 1,
                 "max": 6,
                 "required": 3,
                 "commands": {
@@ -86,23 +86,23 @@ cog_permissions = {
     },
 
     "Infractions": {
-        "min": 2,
+        "min": 1,
         "max": 6,
         "required": 2,
         "commands": {
             "inf": {
                 "required": 2,
-                "min": 2,
+                "min": 1,
                 "max": 6,
                 "commands": {
-                    "delete": {"required": 5, "min": 2, "max": 6}
+                    "delete": {"required": 5, "min": 1, "max": 6}
                 }
             }
         }
     },
 
     "Moderation": {
-        "min": 2,
+        "min": 1,
         "max": 6,
         "required": 2,
         "commands": {
@@ -121,7 +121,7 @@ cog_permissions = {
     },
 
     "ServerAdmin": {
-        "min": 3,
+        "min": 2,
         "max": 5,
         "required": 3,
         "commands": {
