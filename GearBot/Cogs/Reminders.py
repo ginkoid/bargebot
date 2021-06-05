@@ -139,7 +139,7 @@ class Reminders(BaseCog):
         await MessageUtils.send_to(ctx, "YES", "reminder_removed", id=reminder.id)
 
     @remind.command(aliases=["update","e"])
-    async def edit(self, ctx, reminder: PendingReminder, content: ReminderText):
+    async def edit(self, ctx, reminder: PendingReminder, *, content: ReminderText):
         """remind_edit_help"""
         reminder.to_remind = await Utils.clean(content, markdown=False, links=False, emoji=False)
         await reminder.save()
