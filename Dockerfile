@@ -1,13 +1,11 @@
-FROM python:3.9.4-slim-buster AS build
-
+FROM python:3.9.5-slim-buster AS build
 WORKDIR /app
 COPY requirements.txt .
-RUN apt-get update && apt-get install build-essential -y && pip install -r requirements.txt
+RUN pip install -r requirements.txt
 
-FROM python:3.9.4-slim-buster
-
+FROM python:3.9.5-slim-buster
 WORKDIR /app
 COPY --from=build /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
-COPY . .
-
+COPY lang lang
+COPY GearBot GearBot
 CMD ["python", "GearBot/GearBot.py"]
