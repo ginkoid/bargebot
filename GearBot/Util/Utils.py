@@ -50,9 +50,22 @@ async def cleanExit(bot, trigger):
 
 
 def trim_message(message, limit):
-    if len(message) < limit - 4:
+    if len(message) < limit - 3:
         return message
-    return f"{message[:limit-4]}..."
+    return f"{message[:limit-3]}..."
+
+def chunk_message(message, limit):
+    result = []
+    r = range(0, len(message), limit-6)
+    for i, pos in enumerate(r):
+        chunk = ""
+        if i > 0:
+            chunk = "..."
+        chunk += message[pos:pos+limit-6]
+        if i < len(r) - 1:
+            chunk += "..."
+        result.append(chunk)
+    return result
 
 async def empty_list(ctx, action):
     message = await ctx.send(Translator.translate('m_nobody', ctx, action=action))

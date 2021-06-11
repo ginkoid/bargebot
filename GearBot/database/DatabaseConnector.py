@@ -7,7 +7,7 @@ from Util import Configuration
 
 class LoggedMessage(Model):
     messageid = fields.BigIntField(pk=True, generated=False)
-    content = fields.CharField(max_length=2000, collation="utf8mb4_general_ci", null=True)
+    content = fields.CharField(max_length=4000, collation="utf8mb4_general_ci", null=True)
     author = fields.BigIntField(index=True)
     channel = fields.BigIntField(index=True)
     server = fields.BigIntField(index=True)

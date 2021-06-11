@@ -358,7 +358,11 @@ def log_raw(guild_id, key, message=None, embed=None, file=None):
     # no targets? no logging
     if len(targets) == 0:
         return
-    log_to(guild_id, targets, Utils.trim_message(message, 2000) if message is not None else None, embed, file, None)
+    if message is None:
+        log_to(guild_id, targets, None, embed, file, None)
+        return
+    for chunk in Utils.chunk_message(message, 2000):
+        log_to(guild_id, targets, chunk, embed, file, None)
 
 
 def log_key(guild_id, key, embed=None, file=None, can_stamp=True, tag_on=None, timestamp=datetime.now(), **kwargs):
