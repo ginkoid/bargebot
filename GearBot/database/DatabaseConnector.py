@@ -17,7 +17,7 @@ class LoggedMessage(Model):
 
 class LoggedAttachment(Model):
     id = fields.BigIntField(pk=True, generated=False)
-    name = fields.CharField(max_length=100)
+    name = fields.CharField(max_length=128)
     isImage = fields.BooleanField()
     message = fields.ForeignKeyField("models.LoggedMessage", related_name='attachments', source_field='messageid')
 
