@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import re
+from collections import namedtuple
 
 import emoji
 from concurrent.futures import CancelledError
@@ -15,6 +16,7 @@ from discord.ext import commands
 from discord.guild import Guild
 from discord.member import Member
 from discord.message import Message
+from discord.utils import snowflake_time
 
 from Bot import TheRealGearBot
 from Cogs.BaseCog import BaseCog
@@ -113,7 +115,7 @@ class AntiSpam(BaseCog):
             return
 
         # Use the discord's message timestamp to hopefully not trigger false positives
-        msg_time = int(message.created_at.timestamp()) * 1000
+        msg_time = snowflake_time(message.id).time()
 
         async def check_bucket(check, friendly_text, amount, b):
             # print(f"{check} - {amount}")
