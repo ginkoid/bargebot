@@ -155,7 +155,7 @@ class CustCommands(BaseCog):
         permissions = message.channel.permissions_for(me)
         if me is None:
             return
-        if not (permissions.read_messages and permissions.send_messages and permissions.embed_links):
+        if not permissions.send_messages:
             return
 
         role_list = Configuration.get_var(message.guild.id, "CUSTOM_COMMANDS", "ROLES")
@@ -166,7 +166,7 @@ class CustCommands(BaseCog):
 
         is_mod = message.author is not None and Permissioncheckers.is_mod(message.author)
 
-        if (message.channel.id in channel_list) is channels_ignored and not (is_mod and mod_bypass):
+        if (message.channel.id in channel_list) is not channels_ignored and not (is_mod and mod_bypass):
             return
 
         has_role = False

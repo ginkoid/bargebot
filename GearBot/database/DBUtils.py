@@ -14,13 +14,12 @@ async def insert_message(message):
         else:
             if not isinstance(message_type, int):
                 message_type = message_type.value
-        async with in_transaction():
-            is_reply = message.reference is not None and message.reference.channel_id == message.channel.id
-            logged = await LoggedMessage.create(messageid=message.id, content=message.content.replace('\x00', ''),
-                                        author=message.author.id,
-                                        channel=message.channel.id, server=message.guild.id,
-                                        type=message_type, pinned=message.pinned,
-                                                reply_to=message.reference.message_id if is_reply else None)
+        is_reply = message.reference is not None and message.reference.channel_id == message.channel.id
+        logged = await LoggedMessage.create(messageid=message.id, content=message.content.replace('\x00', ''),
+                                    author=message.author.id,
+                                    channel=message.channel.id, server=message.guild.id,
+                                    type=message_type, pinned=message.pinned,
+                                            reply_to=message.reference.message_id if is_reply else None)
         for a in message.attachments:
             await LoggedAttachment.create(id=a.id, name=a.filename,
                                        isImage=(a.width is not None or a.width == 0),

@@ -363,6 +363,7 @@ def v32(config):
 def v33(config):
     config["CENSORING"]["ALLOW_TRUSTED_CENSOR_BYPASS"] = False
     config["FLAGGING"]["TRUSTED_BYPASS"] = False
+    config["CUSTOM_COMMANDS"]["CHANNELS_IGNORED"] = not config["CUSTOM_COMMANDS"]["CHANNELS_IGNORED"]
 
 def add_logging(config, *args):
     for cid, info in config["LOG_CHANNELS"].items():

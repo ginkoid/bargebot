@@ -1099,7 +1099,7 @@ class Moderation(BaseCog):
     @commands.bot_has_permissions(manage_messages=True)
     async def clean_links(self, ctx, amount: RangedInt(1, 5000)):
         """clean_links_help"""
-        await self._clean(ctx, amount, lambda m: len(URL_MATCHER.findall(m.content)) > 1)
+        await self._clean(ctx, amount, lambda m: len(URL_MATCHER.findall(m.content)) > 0)
 
 
     @clean.command("containing")
@@ -1238,7 +1238,7 @@ class Moderation(BaseCog):
                 for name, action in types.items():
 
                     for infraction in await Infraction.filter(type = name, active = True, end__lt=limit):
-                        if infraction.id not in self.handling and ((infraction.guild_id >> 22) % self.bot.total_shards) in self.bot.shard_ids:
+                        if infraction.id not in self.handling:
                             self.handling.add(infraction.id)
                             self.bot.loop.create_task(
                                 self.run_after(infraction.end - now, action(infraction)))

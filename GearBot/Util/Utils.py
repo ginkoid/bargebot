@@ -281,7 +281,7 @@ def assemble_attachment(channel, aid, name):
 
 
 def assemble_jumplink(server, channel, message):
-    return f"https://canary.discord.com/channels/{server}/{channel}/{message}"
+    return f"https://discord.com/channels/{server}/{channel}/{message}"
 
 async def get_member(bot, guild, user_id, fetch_if_missing=False):
     member = guild.get_member(user_id)

@@ -111,13 +111,11 @@ class ServerAdmin(BaseCog):
     async def delete_category(self, ctx: commands.Context, category: discord.CategoryChannel):
         """delete_category_help"""
         failures = []
-        if not category.permissions_for(ctx.guild.me).manage_channels or not category.permissions_for(ctx.author).manage_channels:
-            failures.append(f'{Utils.clean_name(category.name)} ({category.id})')
-        for channel in category.channels:
+        for channel in [category] + category.channels:
             if not channel.permissions_for(ctx.guild.me).manage_channels or not channel.permissions_for(ctx.author).manage_channels:
                 failures.append(f'#{Utils.clean_name(channel.name)} ({channel.id})')
         if len(failures) > 0:
-            await Pages.create_new(self.bot, "mass_failures", ctx, action="delete_category",
+            await Pages.create_new(self.bot, "mass_failures", ctx, action_type="delete_category",
                         failures="----NEW PAGE----".join(Pages.paginate("\n".join(failures))))
             return
         async def yes():
@@ -1565,7 +1563,7 @@ class ServerAdmin(BaseCog):
             desc = "\n".join(f"<@&{role}>" for role in roles)
         embed.add_field(name=Translator.translate('ignored_roles', ctx), value=desc)
 
-        embed.set_footer(text=Translator.translate("mods_are_immune", ctx), icon_url='https://cdn.discordapp.com/emojis/585877748996636674.png?v=1')
+        embed.set_footer(text=Translator.translate("mods_are_immune", ctx))
 
         return embed
 

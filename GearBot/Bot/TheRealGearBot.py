@@ -41,7 +41,7 @@ async def initialize(bot, startup=False):
         await DatabaseConnector.init()
         GearbotLogging.info("Database connection established.")
 
-        Emoji.initialize(bot)
+        await Emoji.initialize(bot)
         Utils.initialize(bot)
         InfractionUtils.initialize(bot)
         bot.data = {
