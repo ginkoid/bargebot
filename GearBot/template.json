@@ -1,5 +1,5 @@
 {
-  "VERSION": 30,
+  "VERSION": 34,
   "GENERAL": {
     "LANG": "en_US",
     "PERM_DENIED_MESSAGE": true,
@@ -20,11 +20,13 @@
     "IGNORED_CHANNELS_CHANGES": [],
     "IGNORED_CHANNELS_OTHER": [],
     "IGNORED_USERS": [],
-    "EMBED": false
+    "EMBED": false,
+    "MESSAGE_ID": false
   },
   "CENSORING": {
     "ENABLED": false,
     "ALLOW_TRUSTED_BYPASS": false,
+    "ALLOW_TRUSTED_CENSOR_BYPASS": false,
     "WORD_CENSORLIST": [],
     "TOKEN_CENSORLIST": [],
     "ALLOWED_INVITE_LIST": [],
@@ -33,13 +35,24 @@
     "FULL_MESSAGE_LIST": [],
     "CENSOR_EMOJI_ONLY_MESSAGES": false
   },
+  "FLAGGING": {
+    "WORD_LIST": [],
+    "TOKEN_LIST": [],
+    "TRUSTED_BYPASS": false
+  },
   "INFRACTIONS": {
     "DM_ON_WARN": false,
     "DM_ON_UNMUTE": false,
     "DM_ON_MUTE": false,
     "DM_ON_KICK": false,
     "DM_ON_BAN": false,
-    "DM_ON_TEMPBAN": false
+    "DM_ON_TEMPBAN": false,
+    "WARNING": null,
+    "UNMUTE": null,
+    "MUTE": null,
+    "KICK": null,
+    "BAN": null,
+    "TEMPBAN": null
   },
   "PERM_OVERRIDES": {},
   "RAID_HANDLING": {
@@ -71,9 +84,5 @@
     "CHANNELS": [],
     "CHANNELS_IGNORED": true,
     "MOD_BYPASS": true
-  },
-  "FLAGGING": {
-    "WORD_LIST": [],
-    "TOKEN_LIST": []
   }
 }
