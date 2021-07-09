@@ -34,7 +34,7 @@ class Infractions(BaseCog):
         """warn_help"""
         # don't allow warning GearBot, get some feedback about issues instead
 
-        reason += ",".join(Utils.assemble_attachment(ctx.message.channel.id, attachment.id, attachment.filename) for attachment in ctx.message.attachments)
+        reason = Utils.enrich_reason(ctx, reason)
         if len(reason) > 1800:
             raise TranslatedBadArgument('reason_too_long', ctx)
 
