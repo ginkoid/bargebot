@@ -277,7 +277,7 @@ def to_pretty_time(seconds, guild_id):
 
 
 def assemble_attachment(channel, aid, name):
-    return f"https://media.discordapp.net/attachments/{channel}/{aid}/{name}"
+    return f"https://cdn.discordapp.com/attachments/{channel}/{aid}/{name}"
 
 
 def assemble_jumplink(server, channel, message):
