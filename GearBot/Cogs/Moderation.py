@@ -948,7 +948,7 @@ class Moderation(BaseCog):
         embed.add_field(name=Translator.translate('account_created_at', ctx),
                         value=f"``{user.created_at}`` ({timeago.format(user.created_at)})",
                         inline=True)
-        if ctx.guild is not None:
+        if ctx.guild is not None and Configuration.get_var(ctx.guild.id, "INFRACTIONS", "USERINFO_COUNT", True):
             il = await Infraction.filter(user_id=user.id, guild_id=ctx.guild.id).count()
             emoji = "SINISTER" if il >= 2 else "INNOCENT"
             embed.add_field(name=Translator.translate("infractions", ctx), value=MessageUtils.assemble(ctx, emoji, "guild_infractions", total=il))
